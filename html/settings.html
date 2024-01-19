@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Raspi-Cloud</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="settings.css">
+</head>
+
+<body>
+    <!-- Header Section -->
+    <div class="header">
+        <div class="back-button" id="back-button" onclick="goBack()">⬅</div>
+        <div class="view-toggle" id="view-toggle" onclick="toggleView()">↺</div>
+        <b style="font-size: var(--bigger-text-size);" id="header-titel"></b>
+        <div class="dark-mode-button" onclick="toggleDarkMode()">🌙</div>
+    </div>
+
+    <!-- Navigation Menu Button -->
+    <div class="menu-button" onclick="openMenu()">
+        <div class="menu-icon"></div>
+        <div class="menu-icon"></div>
+        <div class="menu-icon"></div>
+    </div>
+
+    <!-- Overlay to Close Menu -->
+    <div class="overlay" id="overlay" onclick="closeMenu()"></div>
+
+    <!-- Navigation Menu -->
+    <div class="menu" id="menu">
+        <div class="menu-close-button" onclick="closeMenu()">✕</div>
+        <a href="/filepage.html">Filepage</a>
+        <a href="#" class="logout">Logout</a>
+    </div>
+
+    <!-- User List Container (Dynamic) -->
+    <div id="userList" class="user-list-container">
+        <!-- Dynamic user data here -->
+    </div>
+
+    <!-- Group List Container (Dynamic, Initially Hidden) -->
+    <div id="groupList" class="group-list-container" style="display:none;">
+        <!-- Dynamic group data here -->
+    </div>
+
+    <!-- New User Modal -->
+    <div id="newUserModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('newUserModal')">&times;</span>
+            <!-- Form for creating a new user -->
+            <form id="newUserForm">
+                <h2>New User</h2>
+                <input type="text" id="newUsername" name="username" placeholder="Username" required><br><br>
+                <input type="password" id="newPassword" name="password" placeholder="Password" required><br><br>
+                <input type="submit" value="Create User">
+            </form>
+        </div>
+    </div>
+
+    <!-- New Group Modal -->
+    <div id="newGroupModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('newGroupModal')">&times;</span>
+            <!-- Form for creating a new group -->
+            <form id="newGroupForm">
+                <h2>New Group</h2>
+                <input type="text" id="newGroupName" name="groupname" placeholder="Group Name" required><br><br>
+                <input type="submit" value="Create Group">
+            </form>
+        </div>
+    </div>
+
+    <!-- Include JavaScript Files -->
+    <script src="script.js"></script>
+    <script src="settings.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Setting character encoding and title of the page -->
+    <meta charset="UTF-8">
+    <title>Login - Raspi-Cloud</title>
+    <!-- Favicon for the website -->
+    <link rel="icon" href="favicon.png" type="image/x-icon">
+    <!-- Responsive design settings -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <!-- Linking CSS stylesheets for general and login-specific styling -->
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles_login.css">
+</head>
+<body>
+    <!-- Button for toggling dark mode -->
+    <div class="dark-mode-button" onclick="toggleDarkMode()">🌙</div>
+    <!-- Login form with username and password fields -->
+    <form id="loginForm">
+        <h1>Login</h1>
+        <input type="text" id="username" placeholder="User name" required><br>
+        <input type="password" id="password" placeholder="Password" required><br>
+        <button type="submit">Login</button>
+    </form>
+    <!-- JavaScript for handling login functionality -->
+    <script src="script_login.js"></script>
+</body>
+</html>

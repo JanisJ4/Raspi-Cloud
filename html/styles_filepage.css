@@ -1,0 +1,337 @@
+/* Style for the 'moreMenu' element */
+#moreMenu {
+    display: none; /* Initially hidden */
+    position: absolute;
+    font-size: var(--normal-text-size);
+    background-color: var(--background-color);
+    border: 1px solid var(--border-line);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 10px;
+    z-index: 1;
+    transition: bottom 0.3s ease; /* Added for transition effect */
+}
+
+/* Style for buttons within the 'moreButton' class */
+.moreButton button {
+    cursor: pointer;
+    padding: 8px;
+    margin: 2px;
+    transition: background-color 0.3s;
+    border-bottom: 1px solid var(--border-line); /* Added a line between options */
+}
+
+/* Style for the 'fileTable' element */
+#fileTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px; /* Optional: Add some top margin */
+}
+
+#fileTable th,
+#fileTable td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+#fileTable th {
+    background-color: #f2f2f2;
+}
+
+/* Container styles */
+#internalArea {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+.header {
+    padding: 20px;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    border-bottom: 1px solid var(--border-line); /* Change line color in dark mode */
+}
+
+body.light-mode .header {
+    background-color: var(--background-color);
+    color: var(--text-color); /* Text color in dark mode */
+    border-bottom: 1px solid var(--border-line); /* Change line color in dark mode */
+}
+
+.container {
+    flex-grow: 1;
+    overflow-y: auto; /* Scroll if needed */
+    padding: 20px;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+/* Styles for file lists */
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    font-size: var(--normal-text-size);
+    background-color: var(--background-color);
+    border-top: 1px solid var(--border-line);
+}
+
+ul li:last-child {
+    border-bottom: 1px solid var(--border-line); /* Color of the bottom line */
+}
+
+.button-container {
+    display: flex;
+    gap: 10px;
+}
+
+/* Style for directory links */
+.directory-buttons.light-mode {
+    color: #595959;
+}
+
+.directory-buttons a {
+    text-decoration: none;
+    font-weight: bold;
+    color: var(--green);
+    cursor: pointer;
+}
+
+.directory-buttons a:not(:last-child)::after {
+    content: '/';
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+.directory-buttons .last-added {
+    height: 20px;
+    width: 20px;
+    padding: 5px;
+    text-align: center;
+    border-radius: 50%;
+    margin-left: 5px;
+    display: inline-block;
+    color: var(--text-color);
+    font-size: 1.1em;
+    font-weight: 600;
+    background-color: var(--background-color);
+    border: 1px solid var(--border-line);
+}
+
+/* Styles for the 'fileList' element */
+#fileList {
+    list-style: none;
+    padding: 0;
+    margin: auto; /* Center the list horizontally */
+    margin-top: 30px;
+    width: 97%; /* Adjust to your layout */
+    box-sizing: border-box; /* Ensure padding and border are within width */
+}
+
+.fileListHeader,
+.fileListItem {
+    display: grid;
+    grid-template-columns: 4fr 2fr 2fr 2fr 1fr 1fr;
+    align-items: center;
+    width: 100%; /* Take full width of #fileList container */
+    overflow: hidden;
+    box-sizing: border-box; /* Ensure padding and border are within width */
+}
+
+.fileInfo {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding: 5px;
+    box-sizing: border-box; /* Ensure padding and border are within width */
+}
+
+.fileButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    width: 30px; /* Set the desired button width here */
+    height: 30px; /* Set button height to match width */
+}
+
+.deleteButton {
+    background-color: red;
+    color: white;
+}
+
+.actionButton {
+    background-color: var(--green);
+    color: white;
+}
+
+.fileListItem .moreButton {
+    display: none;
+    margin-right: 10px;
+}
+
+.groupItem {
+    background: var(--border-line);
+    padding: 10px;
+    margin-top: -30px;
+    margin-bottom: 40px;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+}
+
+/* Styles for the modal */
+.modal {
+    display: none; /* Initially hidden */
+    position: fixed; /* Stay in place */
+    z-index: 2; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: hidden;
+    background-color: rgba(0, 0, 0, 0.4); /* Black with opacity */
+}
+
+.modal-content {
+    max-width: 300px;
+    margin: 100px auto;
+    padding: 20px;
+    background-color: var(--background-color);
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+}
+
+.modal h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.modal input[type="text"],
+.modal input[type="password"] {
+    width: calc(100% - 20px);
+    margin-bottom: 20px;
+    padding: 10px;
+    font-size: var(--normal-text-size);
+    border-radius: 5px;
+    border: 1px solid var(--border-line);
+    background-color: var(--background-color); 
+    color: var(--text-color);
+}
+
+.modal input[type="submit"] {
+    width: 100%;
+    background-color: var(--green);
+    color: var(--text-color);
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    cursor: pointer;
+}
+
+.close {
+    color: var(--text-color);
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Media query for small screens (max-width: 768px) */
+@media only screen and (max-width: 768px) {
+    .directory-buttons .last-added {
+        position: fixed;
+        bottom: 15px;
+        right: 15px;
+        height: 45px;
+        width: 45px;
+        padding: 10px;
+        text-align: center; /* Center horizontally */
+        border-radius: 50%;
+        display: flex; /* Use flex container */
+        justify-content: center; /* Center content horizontally in flex container */
+        align-items: center; /* Center content vertically in flex container */
+        color: var(--text-color);
+        font-size: 2.5em;
+        font-weight: 600;
+        background-color: var(--green);
+        border: 1px solid var(--background-color);
+        line-height: 45px; /* Remove if using flexbox */
+    }
+
+    .fileListHeader .fileInfo:nth-child(2),
+    .fileListHeader .fileInfo:nth-child(3),
+    .fileListHeader .fileInfo:nth-child(4),
+    .fileListItem .fileInfo:nth-child(2),
+    .fileListItem .fileInfo:nth-child(3),
+    .fileListItem .fileInfo:nth-child(4) {
+        display: none;
+    }
+
+    /* Hide delete and download buttons */
+    .fileListItem .deleteButton,
+    .fileListItem .actionButton {
+        display: none;
+    }
+
+    .fileListItem .moreButton {
+        display: block;
+    }
+
+    .fileListItem {
+        grid-template-columns: 1fr auto;
+    }
+
+    /* Style for the 'moreMenu' on small screens */
+    #moreMenu {
+        position: fixed; /* Position relative to viewport */
+        left: 0;
+        right: 0;
+        bottom: -100%; /* Start off-screen */
+        background-color: var(--background-color); /* Menu background color */
+        box-shadow: 0px -2px 8px rgba(0, 0, 0, 0.25); /* Shadow for a "floating" effect */
+        transition: bottom 0.3s ease-in-out; /* Smooth animation */
+        z-index: 3; /* Ensure the menu appears above other elements */
+        padding: 0 10px; /* Inner padding */
+    }
+
+    /* Display 'moreButton' at the right */
+    .fileListItem>.fileButton.moreButton {
+        display: flex; /* Ensure the button is displayed */
+        justify-content: flex-end; /* Position the button all the way to the right */
+    }
+
+    .menuButton {
+        display: block; /* Buttons take full width */
+        margin: 10px 0; /* Spacing between buttons */
+        width: 100%; /* Full width */
+        padding: 10px; /* Inner padding for buttons */
+        border: none; /* No border */
+        background-color: var(--background-color); /* Button background color */
+        cursor: pointer; /* Cursor changes on hover */
+        transition: background-color 0.2s; /* Smooth background color change on hover */
+    }
+
+    .menuButton hr {
+        border: none;
+        height: 1px;
+        background-color: var(--border-line); /* Color of separator lines */
+        margin: 10px 0; /* Spacing around separator lines */
+    }
+}
