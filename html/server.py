@@ -25,7 +25,7 @@ app.config['SECRET_KEY'] = os.urandom(24).hex()
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Determine the path to the user's "Documents" directory
-home_directory = '/srv/raspi-cloud/'  # Replace with `Path(os.environ['HOME'])` for dynamic home directory
+home_directory = '/srv/Raspi-Cloud/'  # Replace with `Path(os.environ['HOME'])` for dynamic home directory
 
 # Paths for the user database, files database, and uploaded files directory
 db_path = home_directory + 'Database/user_database.db'
@@ -135,7 +135,7 @@ if not os.path.exists(db_files_path):
 
 def log_login_attempt(timestamp, username, ip_address, status, message):
     # Log login attempts to a file
-    with open("/home/pi/login_attempts.log", "a") as log_file:
+    with open(home_directory + "login_attempts.log", "a") as log_file:
         # Write the log entry with timestamp, username, IP address, status, and message
         log_file.write(f"{timestamp} - Username: {username}, IP: {ip_address}, Status: {status}, Message: {message}\n")
 

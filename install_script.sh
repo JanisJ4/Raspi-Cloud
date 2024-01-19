@@ -1,5 +1,5 @@
 #!/bin/bash
-# This is a bash script for setting raspi-cloud
+# This is a bash script for setting Raspi-Cloud
 
 # Determine the directory where this installation script is located
 SCRIPT_DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -46,19 +46,19 @@ git config --global --add safe.directory "$SCRIPT_DIRECTORY"
 git config pull.rebase false
 
 # Create a script to update the cloud content and make it executable
-echo "/bin/bash -c 'date && cd $SCRIPT_DIRECTORY && git pull && sudo rsync -av --delete $SCRIPT_DIRECTORY/html/ /var/www/html/' 2>&1 | tee -a /var/log/VelocityCloud.log" > updateVelocityCloud
-chmod +x updateVelocityCloud
-mv updateVelocityCloud /usr/local/bin/
+echo "/bin/bash -c 'date && cd $SCRIPT_DIRECTORY && git pull && sudo rsync -av --delete $SCRIPT_DIRECTORY/html/ /var/www/html/' 2>&1 | tee -a /var/log/Raspi-Cloud.log" > updateRaspi-Cloud
+chmod +x updateRaspi-Cloud
+mv updateRaspi-Cloud/usr/local/bin/
 
 # Create a startup script for the cloud service and make it executable
-echo "/bin/bash -c 'date && source $SCRIPT_DIRECTORY/venv/bin/activate && nohup python3 /var/www/html/server.py' && nohup python3 $SCRIPT_DIRECTORY/watcher.py 2>&1 | tee -a /var/log/VelocityCloud.log" > startVelocityCloud
-chmod +x startVelocityCloud
-mv startVelocityCloud /usr/local/bin/
+echo "/bin/bash -c 'date && source $SCRIPT_DIRECTORY/venv/bin/activate && nohup python3 /var/www/html/server.py' && nohup python3 $SCRIPT_DIRECTORY/watcher.py 2>&1 | tee -a /var/log/Raspi-Cloud.log" > startRaspi-Cloud
+chmod +x startRaspi-Cloud
+mv startRaspi-Cloud /usr/local/bin/
 
 # Schedule the update and startup scripts to run at reboot and periodically using crontab
-(crontab -l; echo "@reboot /usr/local/bin/updateVelocityCloud") | sort -u | crontab -
-(crontab -l; echo "@reboot /usr/local/bin/startVelocityCloud") | sort -u | crontab -
-(crontab -l; echo "0 * * * * /usr/local/bin/updateVelocityCloud") | sort -u | crontab -
+(crontab -l; echo "@reboot /usr/local/bin/updateRaspi-Cloud") | sort -u | crontab -
+(crontab -l; echo "@reboot /usr/local/bin/startRaspi-Cloud") | sort -u | crontab -
+(crontab -l; echo "0 * * * * /usr/local/bin/updateRaspi-Cloud") | sort -u | crontab -
 
 # Confirm the completion of the installation process
 echo "Installation complete."
