@@ -17,8 +17,8 @@ In an era where life is increasingly shifting to the digital realm, secure cloud
 
 ```bash
 sudo apt-get install -y git
-git clone git@github.com:JanisJ4/raspi-cloud.git
-cd raspi-cloud
+git clone git@github.com:JanisJ4/Raspi-Cloud.git
+cd Raspi-Cloud
 sudo bash install_script.sh 
 ```
 
@@ -92,7 +92,8 @@ sudo chmod 640 /etc/letsencrypt/live/yourdomain.com/privkey.pem
 
 Replace `yourdomain.com` with your domain and `username` with your username.
 
-### 6. Restart Apache
+
+### 6. Restart
 
 ```bash
 sudo reboot
