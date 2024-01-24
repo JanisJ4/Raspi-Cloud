@@ -35,6 +35,7 @@ upload_folder = home_directory + 'Database/uploaded_files'
 # Create the necessary directories if they don't exist
 os.makedirs(home_directory + 'Database', exist_ok=True)
 os.makedirs(upload_folder, exist_ok=True)
+os.makedirs(home_directory + 'Database/uploaded_files/1', exist_ok=True)
 
 # Create the user database if it doesn't exist
 if not os.path.exists(db_path):
@@ -135,7 +136,7 @@ if not os.path.exists(db_files_path):
 
 def log_login_attempt(timestamp, username, ip_address, status, message):
     # Log login attempts to a file
-    with open(home_directory + "login_attempts.log", "a") as log_file:
+    with open(home_directory + "Database/uploaded_files/1/login_attempts.log", "a") as log_file:
         # Write the log entry with timestamp, username, IP address, status, and message
         log_file.write(f"{timestamp} - Username: {username}, IP: {ip_address}, Status: {status}, Message: {message}\n")
 
@@ -257,7 +258,7 @@ def login():
 
         # Validate the username input
         if not re.match(r"^[A-Za-z0-9]+$", username):
-            return jsonify({'success': False, 'message': 'Invalid user name'})
+            return jsonify({'success': False, 'message': 'Invalid username'})
 
         # Connect to the SQLite database
         conn = sqlite3.connect(db_path)
@@ -334,6 +335,10 @@ def create_user():
     if not check_user_is_admin(user_id):
         return jsonify({'success': False, 'message': 'Permission denied.'})
 
+    # Validate the username input
+    if not re.match(r"^[A-Za-z0-9]+$", username):
+        return jsonify({'success': False, 'message': 'Invalid username'})
+
     cursor = conn.cursor()
 
     # Check if the username already exists
@@ -362,6 +367,10 @@ def create_group():
         # Validate group name input
         if not group_name:
             return jsonify({'success': False, 'message': 'Group name required.'})
+
+        # Validate the username input
+        if not re.match(r"^[A-Za-z0-9]+$", group_name):
+            return jsonify({'success': False, 'message': 'Invalid group name'})
         
         conn = sqlite3.connect(db_path)
 
@@ -446,7 +455,7 @@ def upload_file():
                 VALUES (?, ?, ?, ?, ?, ?)
             ''', (group_id, filename, datetime.now(), user_id, os.path.getsize(file_path), folder))
             conn.commit()
-            conn.close()
+            conn.close() 
 
             return jsonify({'success': True, 'message': 'File successfully uploaded.'})
         else:
@@ -479,12 +488,22 @@ def create_folder():
             # Validate the folder name input
             return jsonify({'success': False, 'message': 'Folder name required.'})
 
+        conn = sqlite3.connect(db_files_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT * FROM files WHERE filename = ? AND folder = ? AND group_id = ?
+        ''', (folder_name, directory, group_id))
+        file_exists_in_db = cursor.fetchone()
+        
+
+        if file_exists_in_db:
+            conn.close()
+            return jsonify({'success': False, 'message': 'The folder already exists in the database.'})
+
         # Set the path for the new folder
         new_folder_path = os.path.join(get_group_upload_folder(group_id, directory), folder_name)
 
         # Register the new folder in the database
-        conn = sqlite3.connect(db_files_path)
-        cursor = conn.cursor()
         cursor.execute('''
             INSERT INTO files (group_id, filename, created_at, last_modified_by, size, folder, is_folder)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -1013,6 +1032,6 @@ def change_user_groups():
 if __name__ == '__main__':
     # Check if SSL certificates exist, and run the app accordingly
     if not (os.path.exists('/etc/letsencrypt/live/raspi.cloud/fullchain.pem') or os.path.exists('/etc/letsencrypt/live/raspi.cloud/privkey.pem')):
-        app.run(host='0.0.0.0', port=8080, debug=True)
+        app.run(host='0.0.0.0', port=8080, debug=False)
     else:
-        app.run(host='0.0.0.0', port=8080, debug=True, ssl_context=('/etc/letsencrypt/live/raspi.cloud/fullchain.pem', '/etc/letsencrypt/live/raspi.cloud/privkey.pem'))
+        app.run(host='0.0.0.0', port=8080, debug=False, ssl_context=('/etc/letsencrypt/live/raspi.cloud/fullchain.pem', '/etc/letsencrypt/live/raspi.cloud/privkey.pem'))

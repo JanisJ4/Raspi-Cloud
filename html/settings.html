@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -11,12 +11,9 @@
 
 <body>
     <!-- Header Section -->
-    <div class="header">
-        <div class="back-button" id="back-button" onclick="goBack()">⬅</div>
-        <div class="view-toggle" id="view-toggle" onclick="toggleView()">↺</div>
-        <b style="font-size: var(--bigger-text-size);" id="header-titel"></b>
-        <div class="dark-mode-button" onclick="toggleDarkMode()">🌙</div>
-    </div>
+    <div class="back-button" id="back-button" onclick="goBack()">⬅</div>
+    <div class="view-toggle" id="view-toggle" onclick="toggleView()">↺</div>
+    <div class="dark-mode-button" onclick="toggleDarkMode()">🌙</div>
 
     <!-- Navigation Menu Button -->
     <div class="menu-button" onclick="openMenu()">
@@ -25,24 +22,36 @@
         <div class="menu-icon"></div>
     </div>
 
-    <!-- Overlay to Close Menu -->
-    <div class="overlay" id="overlay" onclick="closeMenu()"></div>
+    <div id="internalArea">
+        <!-- Overlay to Close Menu -->
+        <div class="overlay" id="overlay" onclick="closeMenu()"></div>
 
-    <!-- Navigation Menu -->
-    <div class="menu" id="menu">
-        <div class="menu-close-button" onclick="closeMenu()">✕</div>
-        <a href="/filepage.html">Filepage</a>
-        <a href="#" class="logout">Logout</a>
-    </div>
+        <!-- Navigation Menu -->
+        <div class="menu" id="menu">
+            <div class="menu-close-button" onclick="closeMenu()">✕</div>
+            <a href="/filepage.html">Filepage</a>
+            <a href="#" class="logout">Logout</a>
+        </div>
+        <!-- Header and main container -->
+        <div class="header">
+            <b style="font-size: var(--bigger-text-size);" id="header-titel"></b>
+        </div>
+        
+        <div class="container">
+            <!-- User List Container (Dynamic) -->
+            <div id="userList" class="user-list-container">
+                <!-- Dynamic user data here -->
+            </div>
 
-    <!-- User List Container (Dynamic) -->
-    <div id="userList" class="user-list-container">
-        <!-- Dynamic user data here -->
-    </div>
+            <!-- Group List Container (Dynamic, Initially Hidden) -->
+            <div id="groupList" class="group-list-container" style="display:none;">
+                <!-- Dynamic group data here -->
+            </div>
 
-    <!-- Group List Container (Dynamic, Initially Hidden) -->
-    <div id="groupList" class="group-list-container" style="display:none;">
-        <!-- Dynamic group data here -->
+            <div id="groupMemberList" class="group-list-container" style="display:none;">
+                <!-- Dynamic group user data here -->
+            </div>
+        </div>
     </div>
 
     <!-- New User Modal -->
@@ -51,10 +60,10 @@
             <span class="close" onclick="closeModal('newUserModal')">&times;</span>
             <!-- Form for creating a new user -->
             <form id="newUserForm">
-                <h2>New User</h2>
+                <h2>New user</h2>
                 <input type="text" id="newUsername" name="username" placeholder="Username" required><br><br>
                 <input type="password" id="newPassword" name="password" placeholder="Password" required><br><br>
-                <input type="submit" value="Create User">
+                <input type="submit" value="Create user">
             </form>
         </div>
     </div>
@@ -65,9 +74,9 @@
             <span class="close" onclick="closeModal('newGroupModal')">&times;</span>
             <!-- Form for creating a new group -->
             <form id="newGroupForm">
-                <h2>New Group</h2>
-                <input type="text" id="newGroupName" name="groupname" placeholder="Group Name" required><br><br>
-                <input type="submit" value="Create Group">
+                <h2>New group</h2>
+                <input type="text" id="newGroupName" name="groupname" placeholder="Group name" required><br><br>
+                <input type="submit" value="Create group">
             </form>
         </div>
     </div>
