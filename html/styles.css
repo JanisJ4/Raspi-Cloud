@@ -1,6 +1,6 @@
 /* Light Mode Styles */
 :root {
-    --background-color: #424242;
+    --background-color: #424242; 
     --text-color: #fff;
     --hover-background: #606060;
     --border-line: #777;
@@ -16,6 +16,11 @@ body.light-mode {
     --text-color: #333;
     --hover-background: #e0e0e0;
     --border-line: #ccc;
+
+    background-color: var(--background-color);
+    color: var(--text-color); /* Text color in dark mode */
+    border-bottom: 1px solid var(--border-line); /* Change line color in dark mode */
+    font-size: var(--normal-text-size);
 }
 
 /* Global Styles */
@@ -24,10 +29,41 @@ body {
     transition: background-color 0.3s, color 0.3s;
     margin: 0;
     padding: 0;
-    overflow: hidden;
     /* Prevents horizontal scrolling */
-    overflow-x: hidden;
+    overflow: hidden;
     background-color: var(--background-color);
+}
+
+/* Container styles */
+#internalArea {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+.header {
+    padding: 20px;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    border-bottom: 1px solid var(--border-line); /* Change line color in dark mode */
+}
+
+/* User and Group Item Styles */
+.user, .group {
+    background: var(--border-line);
+    padding: 10px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    position: relative;
+    z-index: 0;
+}
+
+.container {
+    flex-grow: 1;
+    overflow-y: auto; /* Scroll if needed */
+    padding: 20px;
 }
 
 b {
@@ -70,6 +106,7 @@ hr {
     text-align: left;
     cursor: pointer;
     font-size: var(--bigger-text-size);
+    color:white;
     margin-bottom: 8px;
 }
 
@@ -81,7 +118,7 @@ hr {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
-    z-index: 1;
+    z-index: 2;
 }
 
 .menu {
@@ -93,7 +130,7 @@ hr {
     height: 100%;
     background-color: var(--background-color);
     padding: 10px;
-    z-index: 2;
+    z-index: 3;
     transition: right 0.3s ease; /* Added for transition effect */
 }
 
@@ -128,6 +165,80 @@ button {
     border-radius: 5px;
 }
 
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: rgba(0,0,0,0.4);
+}
+
+/* Modal Content Styles */
+.modal-content {
+    max-width: 300px;
+    margin: 100px auto;
+    padding: 20px;
+    background-color: var(--background-color);
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+    position: relative;
+}
+
+/* Modal Heading Styles */
+.modal h2 {
+    color: var(--text-color);
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Modal Input Styles */
+.modal input[type="text"],
+.modal input[type="password"] {
+    width: calc(100% - 20px);
+    margin-bottom: 0px;
+    padding: 10px;
+    font-size: var(--normal-text-size);
+    border-radius: 5px;
+    border: 1px solid var(--border-line);
+    background-color: var(--background-color); 
+    color: var(--text-color);
+}
+
+/* Modal Submit Button Styles */
+.modal input[type="submit"] {
+    width: 100%;
+    background-color: var(--green);
+    color: var(--text-color);
+    font-size: var(--normal-text-size);
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none; 
+    cursor: pointer;
+}
+
+/* Close Button Styles */
+.close {
+    color: var(--text-color);
+    position: absolute; /* Changed from float to absolute positioning */
+    top: 10px; /* Position the close button 10px from the top */
+    right: 20px; /* Position the close button 10px from the right */
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Close Button Hover and Focus Styles */
+.close:hover,
+.close:focus {
+    text-decoration: none;
+    cursor: pointer;
+}
+
 .last-added {
     height: 20px;
     width: 20px;
@@ -145,6 +256,10 @@ button {
 }
 
 @media only screen and (max-width: 768px) {
+    .modal-content {
+        max-width: 80%;
+    }
+    
     .last-added {
         position: fixed;
         bottom: 15px;

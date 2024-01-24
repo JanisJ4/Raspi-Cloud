@@ -1,47 +1,28 @@
-/* Global Styles */
-body {
-    padding: 20px;
-    background-color: var(--background-color);
-    color: var(--text-color);
-    font-family: Arial, sans-serif;
-}
-
-/* Header Styles */
-.header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-left: 40px;
-    /* Remove or reduce top padding and margin for a compact header */
-    padding-top: 0;
-    margin-top: -3px;
-    margin-bottom: 20px;
-}
-
 /* Back Button and View Toggle Styles */
 .back-button,
-.view-toggle {
+.view-toggle { 
     cursor: pointer;
+    color: var(--text-color);
     font-size: var(--bigger-text-size);
     position: absolute;
-    top: 17px;
+    top: 18px;
     left: 25px;
+}
+
+b {
+    color: var(--text-color);
+    margin: 40px;
 }
 
 /* Heading Styles for User and Group Lists */
 .user-list-container h1,
 .group-list-container h1 {
     margin-bottom: 20px;
+    margin: auto;
 }
 
-/* User and Group Item Styles */
-.user, .group {
-    background: var(--border-line);
-    padding: 10px;
-    margin-bottom: 10px;
-    cursor: pointer;
-    position: relative;
-    z-index: 1;
+#userList {
+    padding-bottom: 20vh;
 }
 
 /* User Menu Styles */
@@ -85,80 +66,8 @@ button.add {
     text-align: center;
 }
 
-/* Modal Styles */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 2;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background-color: rgba(0,0,0,0.4);
-}
-
-/* Modal Content Styles */
-.modal-content {
-    max-width: 300px;
-    margin: 100px auto;
-    padding: 20px;
-    background-color: var(--background-color);
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
-}
-
-/* Modal Heading Styles */
-.modal h2 {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-/* Modal Input Styles */
-.modal input[type="text"],
-.modal input[type="password"] {
-    width: calc(100% - 20px);
-    margin-bottom: 20px;
-    padding: 10px;
-    font-size: var(--normal-text-size);
-    border-radius: 5px;
-    border: 1px solid var(--border-line);
-    background-color: var(--background-color); 
-    color: var(--text-color);
-}
-
-/* Modal Submit Button Styles */
-.modal input[type="submit"] {
-    width: 100%;
-    background-color: var(--green);
-    color: var(--text-color);
-    padding: 14px 20px;
-    margin: 8px 0;
-    border: none;
-    cursor: pointer;
-}
-
-/* Close Button Styles */
-.close {
-    color: var(--text-color);
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-/* Close Button Hover and Focus Styles */
-.close:hover,
-.close:focus {
-    text-decoration: none;
-    cursor: pointer;
-}
-
 /* Media Query for Smaller Screens */
 @media only screen and (max-width: 768px) {
-    .modal-content {
-        margin: 50px 20px;
-    }
     .user-menu, .group-menu {
         grid-template-columns: 1fr;
     }

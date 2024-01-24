@@ -29,14 +29,11 @@
 #loginForm button {
     width: 100%;
     font-weight: bold;
+    color: white;
 }
 
 /* Adjustments for smaller screens (mobile mode) */
 @media only screen and (max-width: 600px) {
-    #loginForm {
-        margin: 50px 20px;
-    }
-
     .dark-mode-button {
         top: 10px;
         right: 10px;
@@ -46,5 +43,9 @@
         --normal-text-size: 14px;
         --bigger-text-size: 18px;
         --button-text-size: 14px;
+    }
+
+    #loginForm {
+        max-width: 80%; /* Reduziert die maximale Breite */
     }
 }

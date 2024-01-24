@@ -1,6 +1,6 @@
 <head>
     <!-- Basic setup for the webpage -->
-    <meta charset="UTF-8">
+    <meta charset="UTF-8"> 
     <title>Raspi-Cloud</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="favicon.png" type="image/x-icon">
@@ -15,8 +15,8 @@
     <div class="dark-mode-button" onclick="toggleDarkMode()">🌙</div>
     <div class="menu-button" onclick="openMenu()"> 
         <div class="menu-icon"></div>
-        <div class="menu-icon"></div> 
-        <div class="menu-icon"></div> 
+        <div class="menu-icon"></div>
+        <div class="menu-icon"></div>
     </div>
 
     <!-- Internal area with overlay, menu, and container -->
@@ -38,6 +38,7 @@
             <div class="navigation">
                 <div id="directoryButtons" class="directory-buttons"></div>
                 <input type="file" id="fileInput" style="display: none;">
+                <div id="moreMenu" class="moreMenu"></div>
             </div>
             <ul id="fileList"></ul>
 
@@ -46,6 +47,7 @@
                 <div class="modal-content">
                     <span class="close" onclick="closeModal('newFolderModal')">&times;</span>
                     <form id="newFolderForm">
+                        <h2>New folder</h2>
                         <input type="text" id="newFolderName" name="newFolderName" placeholder="Folder name" required><br><br>
                         <input type="submit" value="Create folder">
                     </form>

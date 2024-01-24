@@ -29,7 +29,7 @@ function goHome() {
     localStorage.setItem('filepath', '');
     loadGroupFiles();
     // Update directory buttons (commented out)
-}
+} 
 
 // Function to start the file upload process
 function uploadFile() {
@@ -114,7 +114,7 @@ function toggleMiniMenu() {
 
     // Create New Folder Button
     const newFolderButton = document.createElement('button');
-    newFolderButton.textContent = 'New Folder';
+    newFolderButton.textContent = 'New folder';
     newFolderButton.classList.add('menuButton');
     newFolderButton.onclick = function () { createFolder(); };
 
@@ -156,19 +156,20 @@ function closeMiniMenu() {
     var menu = document.getElementById('moreMenu');
     var overlay = document.getElementById("overlay");
 
+    menu.style.bottom = '-10%';
+
     setTimeout(function () {
-        menu.style.bottom = '-100%';
         menu.style.display = 'none';
         overlay.style.display = 'none';
-    }, 100);
 
-    // Remove all buttons in the menu
-    while (menu.firstChild) {
-        menu.removeChild(menu.firstChild);
-    }
+        // Remove all buttons in the menu
+        while (menu.firstChild) {
+            menu.removeChild(menu.firstChild);
+        }
 
-    // Remove the event listener for closing the menu
-    overlay.removeEventListener("click", closeMiniMenu);
+        // Remove the event listener for closing the menu
+        overlay.removeEventListener("click", closeMiniMenu);
+    }, 300);
 }
 
 // Function to update the directory buttons
@@ -181,10 +182,10 @@ function updateDirectoryButtons() {
     const directories = currentPath.split("/").filter(Boolean);
 
     // Create a back button if not in 'onlyGroup' mode
-    if (!localStorage.getItem('onlyGroup')) {
+    if (localStorage.getItem('onlyGroup') === 'false') {
         const backButton = document.createElement("a");
         backButton.href = 'javascript:void(0)';
-        backButton.textContent = 'Gruppen';
+        backButton.textContent = 'Groups';
         backButton.classList.add('backButton');
         backButton.onclick = () => {
             loadUserGroups();
@@ -199,7 +200,7 @@ function updateDirectoryButtons() {
     homelink.textContent = 'Home';
     homelink.style.fontSize = 'var(--normal-text-size)';
     homelink.addEventListener("click", () => {
-        goHome(localStorage.getItem('onlyGroup'));
+        goHome();
     });
     linkContainer.appendChild(homelink);
 

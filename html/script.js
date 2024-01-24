@@ -4,7 +4,7 @@ const serverIP = window.location.hostname;
 const serverPort = '8080';
 
 // Function to toggle dark mode
-function toggleDarkMode() {
+function toggleDarkMode() { 
     const body = document.body;
     // Toggle the 'light-mode' class on the body element to switch between dark and light mode
     body.classList.toggle('light-mode');
@@ -30,14 +30,13 @@ function openMenu() {
 function closeMenu() {
     var menu = document.getElementById('menu');
     var overlay = document.getElementById("overlay");
-    var lastAdded = document.querySelector('.last-added');
+
+    menu.style.right = '-100%'; // Slide the menu out of view
 
     // Animate and hide the menu and overlay
     setTimeout(function () {
         overlay.style.display = 'none';
         menu.style.display = 'none';
-        menu.style.right = '-100%'; // Slide the menu out of view
-        lastAdded.style.bottom = '15px'; // Reset the position of the last added element
     }, 300); // Duration of the transition in milliseconds
 
     // Remove the event listener for closing the menu

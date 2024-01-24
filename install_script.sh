@@ -48,7 +48,7 @@ git config pull.rebase false
 # Create a script to update the cloud content and make it executable
 echo "/bin/bash -c 'date && cd $SCRIPT_DIRECTORY && git pull && sudo rsync -av --delete $SCRIPT_DIRECTORY/html/ /var/www/html/' 2>&1 | tee -a /var/log/Raspi-Cloud.log" > updateRaspi-Cloud
 chmod +x updateRaspi-Cloud
-mv updateRaspi-Cloud/usr/local/bin/
+mv updateRaspi-Cloud /usr/local/bin/
 
 # Create a startup script for the cloud service and make it executable
 echo "/bin/bash -c 'date && source $SCRIPT_DIRECTORY/venv/bin/activate && nohup python3 /var/www/html/server.py' && nohup python3 $SCRIPT_DIRECTORY/watcher.py 2>&1 | tee -a /var/log/Raspi-Cloud.log" > startRaspi-Cloud
