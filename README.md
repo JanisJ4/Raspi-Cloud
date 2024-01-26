@@ -17,7 +17,7 @@ In an era where life is increasingly shifting to the digital realm, secure cloud
 
 ```bash
 sudo apt-get install -y git
-git clone git@github.com:JanisJ4/Raspi-Cloud.git
+git clone https://github.com/JanisJ4/Raspi-Cloud.git
 cd Raspi-Cloud
 sudo bash install_script.sh 
 ```
