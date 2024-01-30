@@ -129,14 +129,15 @@ if not os.path.exists(db_files_path):
             folder TEXT,  -- Path to the folder where the file/folder is stored
             is_folder BOOLEAN DEFAULT FALSE,  -- Indicates whether the entry is a folder
             FOREIGN KEY (group_id) REFERENCES groups(group_id)
+            UNIQUE(filename, folder, group_id)
         )
     ''')
-    conn.commit()
+    conn.commit() 
     conn.close()
 
 def log_login_attempt(timestamp, username, ip_address, status, message):
     # Log login attempts to a file
-    with open(home_directory + "Database/uploaded_files/1/login_attempts.log", "a") as log_file:
+    with open(home_directory + "Database/login_attempts.log", "a") as log_file:
         # Write the log entry with timestamp, username, IP address, status, and message
         log_file.write(f"{timestamp} - Username: {username}, IP: {ip_address}, Status: {status}, Message: {message}\n")
 
@@ -284,7 +285,7 @@ def login():
                 owner_right_id = cursor.fetchone()[0]
                 cursor.execute('INSERT INTO user_rights (user_id, right_id) VALUES (?, ?)', (user_id, owner_right_id))
 
-                # Check and create the "First Group" if it doesn't exist
+                # Check and create the "Your Group" if it doesn't exist
                 cursor.execute('SELECT group_id FROM groups WHERE group_name = "Your group"')
                 group = cursor.fetchone()
                 if group is None:
@@ -293,7 +294,7 @@ def login():
                 else:
                     group_id = group[0]
 
-                # Add the user to the "First Group"
+                # Add the user to the "Your Group"
                 cursor.execute('INSERT INTO group_members (user_id, group_id) VALUES (?, ?)', (user_id, group_id))
 
                 conn.commit()
@@ -404,7 +405,7 @@ def get_group_upload_folder(group_id, folder):
     # Create a user directory if it doesn't exist
     group_folder = os.path.join(upload_folder, str(group_id))
     if folder != "" and folder is not None:
-        group_folder = os.path.join(folder, folder)
+        group_folder = os.path.join(group_folder, folder)
     os.makedirs(group_folder, exist_ok=True)
     return group_folder
 
@@ -436,35 +437,35 @@ def upload_file():
         # Handle case where either file or JSON data is missing
         return jsonify({'success': False, 'message': 'Invalid or missing data.'})
 
-    try:
-        # Check if the user has appropriate permissions to upload the file
-        if (check_user_role(user_id, 'write', group_id) or 
-            check_user_role(user_id, 'local_admin', group_id) or 
-            check_user_is_admin(user_id)):
+    #try:
+    # Check if the user has appropriate permissions to upload the file
+    if (check_user_role(user_id, 'write', group_id) or 
+        check_user_role(user_id, 'local_admin', group_id) or 
+        check_user_is_admin(user_id)):
 
-            # Securely generate a filename and save the file in the designated folder
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(get_group_upload_folder(group_id, folder), filename)
-            file.save(file_path)
+        # Securely generate a filename and save the file in the designated folder
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(get_group_upload_folder(group_id, folder), filename)
+        file.save(file_path)
 
-            # Add a record of the file in the database
-            conn = sqlite3.connect(db_files_path)
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO files (group_id, filename, created_at, last_modified_by, size, folder) 
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (group_id, filename, datetime.now(), user_id, os.path.getsize(file_path), folder))
-            conn.commit()
-            conn.close() 
+        # Add a record of the file in the database
+        conn = sqlite3.connect(db_files_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO files (group_id, filename, created_at, last_modified_by, size, folder) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (group_id, filename, datetime.now(), user_id, os.path.getsize(file_path), folder))
+        conn.commit()
+        conn.close() 
 
-            return jsonify({'success': True, 'message': 'File successfully uploaded.'})
-        else:
-            # Return a permission denied error if the user lacks appropriate rights
-            return jsonify({'success': False, 'message': 'Permission denied.'})
-    except Exception as e:
-        # Handle any exceptions during file upload
-        print(f"Error uploading file: {e}")
-        return jsonify({'success': False, 'message': 'Error uploading file.' + str({e})})
+        return jsonify({'success': True, 'message': 'File successfully uploaded.'})
+    else:
+        # Return a permission denied error if the user lacks appropriate rights
+        return jsonify({'success': False, 'message': 'Permission denied.'})
+    # except Exception as e:
+    #     # Handle any exceptions during file upload
+    #     print(f"Error uploading file: {e}")
+    #     return jsonify({'success': False, 'message': 'Error uploading file.' + str({e})})
 
 @app.route('/create_folder', methods=['POST'])
 @jwt_required()  # Ensure the user is authenticated via JWT
@@ -490,13 +491,11 @@ def create_folder():
 
         conn = sqlite3.connect(db_files_path)
         cursor = conn.cursor()
-        cursor.execute('''
-            SELECT * FROM files WHERE filename = ? AND folder = ? AND group_id = ?
-        ''', (folder_name, directory, group_id))
-        file_exists_in_db = cursor.fetchone()
-        
+        cursor.execute('''SELECT id FROM files WHERE filename = ? AND folder = ? AND group_id = ?''', 
+                   (folder_name, directory, group_id))
+        result = cursor.fetchone()
 
-        if file_exists_in_db:
+        if result is not None:
             conn.close()
             return jsonify({'success': False, 'message': 'The folder already exists in the database.'})
 
@@ -677,12 +676,15 @@ def download_file():
     if user_id is None:
         return jsonify({'success': False, 'message': 'Invalid token.'})
 
-    # Check if the user has permission to download the file
+    # Check user permissions
     if not (check_user_role(user_id, 'read', group_id) or check_user_role(user_id, 'local_admin', group_id) or check_user_is_admin(user_id)):
         return jsonify({'success': False, 'message': 'Permission denied.'})
-        
+
     # Build the full file path by combining the group's upload folder, folder, and filename
     file_path = os.path.join(get_group_upload_folder(group_id, folder), filename)
+
+    if not os.path.isfile(file_path):
+        return jsonify({'success': False, 'message': 'File not found.'}), 404
 
     # Determine the MIME type of the file (e.g., 'application/pdf', 'image/jpeg')
     mimetype, _ = mimetypes.guess_type(filename)

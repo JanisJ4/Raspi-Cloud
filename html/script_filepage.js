@@ -379,6 +379,8 @@ function showGroupFiles(filesAndFolders) {
         actionButton.classList.add('fileButton', 'actionButton');
         // Determine the action button based on whether the item is a folder or file
         if (item.is_folder) {
+            listItem.classList.add('is-folder');
+
             actionButton.innerHTML = '<i class="fa fa-folder"></i>'; // Icon for folder
             actionButton.addEventListener('click', () => openFolder(item.name)); // Event handler to open folder
         } else {
@@ -560,10 +562,6 @@ async function downloadFile(filename) {
 
         const blob = await response.blob(); // Get the blob data from the response
         let correctedFilename = filename;
-        // Ensure the file has the correct extension (for example, '.jpg')
-        if (!correctedFilename.endsWith('.jpg')) {
-            correctedFilename += '.jpg';
-        }
 
         // Create a temporary link element for downloading the file
         const downloadLink = document.createElement('a');
