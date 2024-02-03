@@ -10,6 +10,10 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
+# Ask for the domain name and save it to a configuration file
+read -p "Enter your domain name (else nothing): " DOMAIN_NAME
+echo "DOMAIN_NAME=$DOMAIN_NAME" > "/var/www/config.env"
+
 # Update package lists and install Apache Server, a key component for the web server
 sudo apt-get update
 sudo apt-get install -y apache2
@@ -28,9 +32,8 @@ python3 -m venv $SCRIPT_DIRECTORY/venv
 source $SCRIPT_DIRECTORY/venv/bin/activate
 
 # Install necessary Python libraries for the cloud application
-pip3 install Flask Flask-Bcrypt Flask-JWT-Extended Werkzeug
-pip3 install flask-cors
-pip3 install watchdog
+pip3 install Flask Flask-Bcrypt Flask-JWT-Extended Werkzeug flask-cors watchdog Flask-Limiter Flask-JWT-Extended redis
+pip install python-dotenv
 
 # Install SQLite3, a lightweight database, usually pre-installed on most systems
 sudo apt-get install -y sqlite3

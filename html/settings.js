@@ -1,5 +1,5 @@
 // Wait for the DOM to be fully loaded before executing the code
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => { 
     // Load all users and groups when the page is loaded
     loadAllUsers();
     loadAllGroups();
@@ -177,6 +177,8 @@ function newGroup() {
 
 // Function to load and display all users from the server
 function loadAllUsers() {
+    // Retrieve the authentication token
+    const token = getCookie('token');
     // URL of the Python server that provides user data
     const url = `${protocol}//${serverIP}:${serverPort}/users`;
 
@@ -185,7 +187,12 @@ function loadAllUsers() {
     userList.innerHTML = ''; // Clear the previous content
 
     // Fetch request to the server to retrieve user data
-    fetch(url)
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        }
+    })
         .then(response => response.json()) // Parse the response as JSON
         .then(users => {
             // Process each user in the received data
@@ -280,7 +287,14 @@ function fetchUserGroups(username) {
 
 // Function to fetch available groups
 function fetchGroups() {
-    return fetch(`${protocol}//${serverIP}:${serverPort}/groups`)
+    // Retrieve the authentication token
+    const token = getCookie('token');
+    return fetch(`${protocol}//${serverIP}:${serverPort}/groups`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        }
+    })
         .then(response => response.json());
 }
 
@@ -623,6 +637,8 @@ function loadGroupMembers(group_name) {
 
 // Function to load and display all groups
 function loadAllGroups() {
+    // Retrieve the authentication token
+    const token = getCookie('token');
     // Construct the URL of the Python server that provides group data
     const url = `${protocol}//${serverIP}:${serverPort}/groups`;
 
@@ -631,7 +647,12 @@ function loadAllGroups() {
     groupList.innerHTML = '';
 
     // Send a GET request to the server to fetch groups
-    fetch(url)
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        }
+    })
         .then(response => response.json()) // Parse the response as JSON
         .then(groups => {
             // Process each group
