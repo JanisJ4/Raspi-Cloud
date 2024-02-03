@@ -3,6 +3,7 @@ from flask_cors import CORS
 import socket
 import sqlite3
 import os
+from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 from flask_bcrypt import Bcrypt
 import jwt  # Ensure jwt library is installed, e.g., with "pip install PyJWT"
@@ -31,6 +32,7 @@ home_directory = '/srv/Raspi-Cloud/'  # Replace with `Path(os.environ['HOME'])` 
 db_path = home_directory + 'Database/user_database.db'
 db_files_path = home_directory + 'Database/files.db'
 upload_folder = home_directory + 'Database/uploaded_files'
+logs_path = home_directory + 'Database/logs.log'
 
 # Create the necessary directories if they don't exist
 os.makedirs(home_directory + 'Database', exist_ok=True)
@@ -135,11 +137,46 @@ if not os.path.exists(db_files_path):
     conn.commit() 
     conn.close()
 
-def log_login_attempt(timestamp, username, ip_address, status, message):
-    # Log login attempts to a file
-    with open(home_directory + "Database/login_attempts.log", "a") as log_file:
+def add_to_log(route, username, ip_address, status, message):
+    # Log login attempts
+    print("test")
+    with open(logs_path, "a") as log_file:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # Write the log entry with timestamp, username, IP address, status, and message
-        log_file.write(f"{timestamp} - Username: {username}, IP: {ip_address}, Status: {status}, Message: {message}\n")
+        log_file.write(f"{timestamp} - Route: {route},  Username: {username}, IP: {ip_address}, Status: {status}, Message: {message}\n")
+
+def delete_db_entries(group_id, directory, filename, is_folder):
+    try:
+        conn = sqlite3.connect(db_files_path)
+        cursor = conn.cursor()
+
+        # Begin a transaction
+        conn.execute('BEGIN')
+
+        if is_folder:
+            # Ensure the path is correctly formatted
+            path_to_delete = f"{directory}/{filename}" if directory else filename
+            like_path = f"{path_to_delete}/%"  # Matches everything inside the folder
+            # Delete all files and subfolders within the folder
+            cursor.execute('DELETE FROM files WHERE (folder = ? OR folder LIKE ?) AND group_id = ?', (path_to_delete, like_path, group_id))
+
+            # Additionally, delete the folder entry itself if it exists as a distinct entry
+            cursor.execute('DELETE FROM files WHERE filename = ? AND folder = ? AND group_id = ? AND is_folder = TRUE', (filename, directory, group_id))
+        else:
+            # Delete a single file
+            cursor.execute('DELETE FROM files WHERE filename = ? AND folder = ? AND group_id = ?', (filename, directory, group_id))
+
+        if cursor.rowcount == 0:
+            conn.rollback()  # Rollback the transaction if no files or folders were deleted
+            return 'No file or folder found to delete.'
+        
+        conn.commit()  # Commit the transaction if everything was successful
+        return 'True'
+    except Exception as e:
+        conn.rollback()  # Rollback on any error during database deletion
+        return str(e)
+    finally:
+        conn.close()  # Ensure the connection is closed
 
 # Utility function to establish a database connection
 def get_db_connection():
@@ -211,7 +248,6 @@ def check_user_is_admin(user_id):
 def check_user_role(user_id, required_right, group_id=None):
     # Connect to the database
     conn = get_db_connection()
-    cursor = conn.cursor()
 
     if group_id:
         # Check if the user has the required group right
@@ -243,6 +279,43 @@ def check_user_role(user_id, required_right, group_id=None):
     # Return True if the user has the right (count > 0)
     return result['count'] > 0
 
+def get_group_upload_folder(group_id, folder):
+    # Create a user directory if it doesn't exist
+    group_folder = os.path.join(upload_folder, str(group_id))
+    if folder != "" and folder is not None:
+        group_folder = os.path.join(group_folder, folder)
+    os.makedirs(group_folder, exist_ok=True)
+    return group_folder
+
+def validate_name(input: str, min_chars: int, max_chars: int):
+    # Allows only alphanumeric characters and a length of min_chars-max_chars characters
+    if max_chars == 0:
+        if re.match(r"^[A-Za-z0-9]{" + str(min_chars) + ",}$", input):
+            return True
+    else:
+        if re.match(r"^[A-Za-z0-9]{" + str(min_chars) + "," + str(max_chars) + "}$", input):
+            return True
+    return False
+
+def validate_password(password: str):
+    # At least 8 characters, at least one letter and one number
+    if not re.match(r"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$", password):
+        return True
+    return False
+
+def validate_id(id: str):
+    # Allows only numbers
+    if re.match(r"^\d+$", id):
+        return True
+    return False
+
+def validate_json(json_data, required_keys):
+    for key in required_keys:
+        if key not in json_data:
+            return False
+    return True
+
+
 @app.route('/login', methods=['POST'])
 def login():
     try:
@@ -253,9 +326,9 @@ def login():
 
         # Retrieve the user's IP address and the current timestamp
         ip_address = request.remote_addr
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        add_to_log("/login", username, ip_address, "true", '')
         # Log the login attempt
-        log_login_attempt(timestamp, username, ip_address, "Success", "")
+        # log_login_attempt(timestamp, username, ip_address, "Success", "")
 
         # Validate the username input
         if not re.match(r"^[A-Za-z0-9]+$", username):
@@ -285,7 +358,7 @@ def login():
                 owner_right_id = cursor.fetchone()[0]
                 cursor.execute('INSERT INTO user_rights (user_id, right_id) VALUES (?, ?)', (user_id, owner_right_id))
 
-                # Check and create the "Your Group" if it doesn't exist
+                # Check and create the "First Group" if it doesn't exist
                 cursor.execute('SELECT group_id FROM groups WHERE group_name = "Your group"')
                 group = cursor.fetchone()
                 if group is None:
@@ -294,7 +367,7 @@ def login():
                 else:
                     group_id = group[0]
 
-                # Add the user to the "Your Group"
+                # Add the user to the "First Group"
                 cursor.execute('INSERT INTO group_members (user_id, group_id) VALUES (?, ?)', (user_id, group_id))
 
                 conn.commit()
@@ -320,63 +393,126 @@ def login():
         print('Error during login:', str(e))
         return jsonify({'success': False, 'message': str(e)}), 500
 
+
+@app.route('/get_log', methods=['POST'])
+@jwt_required()
+def get_log():
+    try: 
+        user_id = get_jwt_identity()
+
+        if user_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+        
+        if not check_user_is_admin(user_id):
+            return jsonify({'success': False, 'message': 'Permission denied.'})
+
+        if not os.path.isfile(logs_path):
+            return jsonify({'success': False, 'message': 'The log file could not be found. There may be a security problem on your server. Check whether you have made any changes to the log file yourself. If not, we recommend that you take immediate action!'}), 404
+
+        # Determine the MIME type of the file (e.g., 'application/pdf', 'image/jpeg')
+        mimetype, _ = mimetypes.guess_type("logs.log")
+
+        # Prepare the file for download as an attachment in the response
+        response = make_response(send_file(logs_path, as_attachment=True))
+
+        # Set the Content-Disposition header to suggest a filename when downloading
+        response.headers['Content-Disposition'] = f'attachment; filename={logs_path}'
+
+        # Set the Content-Type header to specify the file's MIME type
+        response.headers['Content-Type'] = mimetype
+
+        return response  # Return the response for file download
+    except Exception as e:
+        # Retrieve the user's IP address and the current timestamp
+        ip_address = request.remote_addr
+        # Handle any exceptions
+        add_to_log("/get_log", user_id, ip_address, "false", 'Error during login:' + str(e))
+        return jsonify({'success': False, 'message': 'A server error has occurred.'}), 500
+
 @app.route('/create_user', methods=['POST'])
 @jwt_required()  # Require a valid JWT to access this route
 def create_user():
-    # Retrieve the user ID from the JWT
-    user_id = get_jwt_identity()
-    data = request.get_json()
-    username = str(data.get('username'))
-    password = str(data.get('password'))
+    try:
+        # Retrieve the user ID from the JWT
+        user_id = get_jwt_identity()
+        if user_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+        
+        data = request.get_json()
+        required_keys = ['username', 'password'] 
+        if not validate_json(data, required_keys):
+            # Log the login attempt
+            add_to_log("/create_user", username, ip_address, "false", 'Invalid or missing data')
+            return jsonify({'success': False, 'message': 'Invalid or missing data'})
+        username = str(data.get('username'))
+        password = str(data.get('password'))
 
-    # Connect to the SQLite database
-    conn = sqlite3.connect(db_path)
+        # Check if the requesting user has admin rights
+        if not check_user_is_admin(user_id):
+            return jsonify({'success': False, 'message': 'Permission denied.'})
 
-    # Check if the requesting user has admin rights
-    if not check_user_is_admin(user_id):
-        return jsonify({'success': False, 'message': 'Permission denied.'})
+        # Validate the username input
+        if not validate_name(username, 3, 25):
+            return jsonify({'success': False, 'message': 'Invalid username. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
 
-    # Validate the username input
-    if not re.match(r"^[A-Za-z0-9]+$", username):
-        return jsonify({'success': False, 'message': 'Invalid username'})
+        # At least 8 characters, at least one letter and one number
+        if not validate_password(password):
+            return jsonify({'success': False, 'message': 'Invalid password. At least 8 characters, at least one letter and one number are required.'})
 
-    cursor = conn.cursor()
+        # Connect to the SQLite database
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
 
-    # Check if the username already exists
-    cursor.execute('SELECT 1 FROM users WHERE username = ?', (username,))
-    if cursor.fetchone() is not None:
-        return jsonify({'success': False, 'message': 'Username already taken.'})
+        # Check if the username already exists
+        cursor.execute('SELECT 1 FROM users WHERE username = ?', (username,))
+        if cursor.fetchone() is not None:
+            # Retrieve the user's IP address and the current timestamp
+            ip_address = request.remote_addr
+            add_to_log("/create_user", username, ip_address, "false", 'Username already taken.')
+            return jsonify({'success': False, 'message': 'Username already taken.'})
 
-    # Add the new user to the database
-    hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-    cursor.execute('INSERT INTO users (username, hashed_password) VALUES (?, ?)', (username, hashed_password))
-    
-    # Commit the transaction and close the connection
-    conn.commit()
-    conn.close()
-    return jsonify({'success': True, 'message': 'New user created.'})
+        # Add the new user to the database
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+        cursor.execute('INSERT INTO users (username, hashed_password) VALUES (?, ?)', (username, hashed_password))
+        
+        # Commit the transaction and close the connection
+        conn.commit()
+        conn.close()
+        # Retrieve the user's IP address and the current timestamp
+        ip_address = request.remote_addr
+        add_to_log("/create_user", username, ip_address, "true", 'New user created.')
+        return jsonify({'success': True, 'message': 'New user created.'})
+    except Exception as e:
+        # Retrieve the user's IP address and the current timestamp
+        ip_address = request.remote_addr
+        # Handle any exceptions
+        add_to_log("/create_user", username, ip_address, "false", 'Error during login:' + str(e))
+        return jsonify({'success': False, 'message': 'A server error has occurred.'}), 500
 
 @app.route('/create_group', methods=['POST'])
 @jwt_required()  # Require a valid JWT to access this route
 def create_group():
-    # Retrieve the user ID from the JWT
-    user_id = get_jwt_identity()
     try:
+        # Retrieve the user ID from the JWT
+        creator_user_id = get_jwt_identity()
+        if creator_user_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+        
         data = request.get_json()
+        required_keys = ['group_name'] 
+        if not validate_json(data, required_keys):
+            return jsonify({'success': False, 'message': 'Invalid or missing data'})
+        
         group_name = data.get('group_name')
 
         # Validate group name input
-        if not group_name:
-            return jsonify({'success': False, 'message': 'Group name required.'})
+        if not validate_name(group_name, 3, 25):
+            return jsonify({'success': False, 'message': 'Invalid group name. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
 
-        # Validate the username input
-        if not re.match(r"^[A-Za-z0-9]+$", group_name):
-            return jsonify({'success': False, 'message': 'Invalid group name'})
-        
         conn = sqlite3.connect(db_path)
 
         # Check if the requesting user has admin rights
-        if not check_user_is_admin(user_id):
+        if not check_user_is_admin(creator_user_id):
             return jsonify({'success': False, 'message': 'Permission denied.'})
 
         with sqlite3.connect(db_path) as conn:
@@ -391,90 +527,199 @@ def create_group():
             cursor.execute('INSERT INTO groups (group_name) VALUES (?)', (group_name,))
             conn.commit()
 
+        # After the group is created, get the group_id
+        cursor.execute('SELECT group_id FROM groups WHERE group_name = ?', (group_name,))
+        group_id = cursor.fetchone()[0]
+
+        # Fetch all user_ids of users with owner rights
+        cursor.execute('''
+            SELECT ur.user_id FROM user_rights ur
+            JOIN rights r ON ur.right_id = r.right_id
+            WHERE r.right_name = 'owner'
+        ''')
+        owners = cursor.fetchall()
+
+        # Add the creator to the group
+        cursor.execute('INSERT INTO group_members (user_id, group_id) VALUES (?, ?)', (creator_user_id, group_id))
+
+        # Add all owners to the group
+        for owner in owners:
+            owner_id = owner[0]
+            if owner_id != creator_user_id:
+                cursor.execute('INSERT INTO group_members (user_id, group_id) VALUES (?, ?)', (owner_id, group_id))
+
+        conn.commit()
+        conn.close()
+
         return jsonify({'success': True, 'message': 'New group created.'})
-
-    # Handle SQLite and general exceptions
-    except sqlite3.Error as e:
-        print('Database error:', str(e))
-        return jsonify({'success': False, 'message': 'Database error: ' + str(e)}), 500
     except Exception as e:
-        print('General error:', str(e))
-        return jsonify({'success': False, 'message': 'Error: ' + str(e)}), 500
+        # Handle any exceptions during file upload
+        return jsonify({'success': False, 'message': 'A server error has occurred.'})
 
-def get_group_upload_folder(group_id, folder):
-    # Create a user directory if it doesn't exist
-    group_folder = os.path.join(upload_folder, str(group_id))
-    if folder != "" and folder is not None:
-        group_folder = os.path.join(group_folder, folder)
-    os.makedirs(group_folder, exist_ok=True)
-    return group_folder
+@app.route('/delete_group', methods=['POST'])
+@jwt_required()
+def delete_group():
+    try:
+        admin_user_id = get_jwt_identity()  # Get the user ID of the admin
+        if admin_user_id is None:
+                return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+
+        if not check_user_is_admin(admin_user_id):
+            return jsonify({'success': False, 'message': 'Permission denied.'})
+
+        data = request.get_json()
+        required_keys = ['group_id'] 
+        if not validate_json(data, required_keys):
+            return jsonify({'success': False, 'message': 'Invalid or missing data'})
+        
+        group_id = data.get('group_id')
+
+        if not validate_id(group_id):
+            return jsonify({'success': False, 'message': 'Invalid group ID. The id must only consist of numbers.'})
+
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            # Check if the group exists
+            cursor.execute('SELECT 1 FROM groups WHERE group_id = ?', (group_id,))
+            if cursor.fetchone() is None:
+                conn.close()
+                return jsonify({'success': False, 'message': 'Group not found.'})
+
+            # Delete the group
+            cursor.execute('DELETE FROM groups WHERE group_id = ?', (group_id,))
+            conn.commit()
+            conn.close()
+            # Retrieve the user's IP address and the current timestamp
+            ip_address = request.remote_addr
+            add_to_log("/delete_group", admin_user_id, ip_address, "true", 'Group deleted successfully.')
+            return jsonify({'success': True, 'message': 'Group deleted successfully.'})
+        except Exception as e:
+            return jsonify({'success': False, 'message': 'A server error has occurred.'}), 500
+    except Exception as e:
+        # Handle any exceptions during file upload
+        return jsonify({'success': False, 'message': 'A server error has occurred.'})
+
+@app.route('/rename_group', methods=['POST'])
+@jwt_required()
+def rename_group():
+    try:
+        admin_user_id = get_jwt_identity()  # Get the user ID of the admin
+
+        if admin_user_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+
+        if not check_user_is_admin(admin_user_id):
+            return jsonify({'success': False, 'message': 'Permission denied.'})
+
+        data = request.get_json()
+        required_keys = ['group_id', 'nwe_group_name'] 
+        if not validate_json(data, required_keys):
+            return jsonify({'success': False, 'message': 'Invalid or missing data'})
+        group_id = data.get('group_id')
+        new_group_name = data.get('new_group_name')
+
+        if group_id is None or new_group_name is None:
+            return jsonify({'success': False, 'message': 'Group ID and new group name are required.'})
+
+        if not validate_id(group_id):
+            return jsonify({'success': False, 'message': 'Invalid group ID. The id must only consist of numbers.'})
+
+        if not validate_name(new_group_name, 3, 25):        
+            return jsonify({'success': False, 'message': 'Invalid group name. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if the group exists
+        cursor.execute('SELECT 1 FROM groups WHERE group_id = ?', (group_id,))
+        if cursor.fetchone() is None:
+            conn.close()
+            return jsonify({'success': False, 'message': 'Group not found.'})
+
+        # Rename the group
+        cursor.execute('UPDATE groups SET group_name = ? WHERE group_id = ?', (new_group_name, group_id))
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'message': 'Group renamed successfully.'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': 'A server error has occurred.'}), 500
 
 @app.route('/upload_file', methods=['POST'])
 @jwt_required()  # Ensure the user is authenticated via JWT
 def upload_file():
-    user_id = get_jwt_identity()  # Get the user's identity from the JWT
-    file = request.files.get('file')  # Extract the uploaded file from the request
-    json_data = request.form.get('json')  # Extract the additional JSON data (like folder and group ID)
+    try:
+        user_id = get_jwt_identity()  # Get the user's identity from the JWT
+        if user_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
 
-    # Debugging prints to check the received file and JSON data
-    print("Received file:", file)
-    print("Received JSON data:", json_data)
+        file = request.files.get('file')  # Extract the uploaded file from the request
+        json_data = request.form.get('json')  # Extract the additional JSON data (like folder and group ID)
 
-    # Validate the presence of both file and JSON data
-    if file and json_data:
-        try:
-            # Parse the JSON data
-            data = json.loads(json_data)
-            folder = data.get('folder')  # Folder to upload the file to
-            group_id = data.get("group")  # Group ID for the upload
-            # Ensure group ID is present
-            if group_id is None:
-                return jsonify({'success': False, 'message': 'Group ID missing in data.'})
-        except (json.JSONDecodeError, TypeError):
-            # Handle errors in JSON parsing
-            return jsonify({'success': False, 'message': 'Could not parse JSON data.'})
-    else:
-        # Handle case where either file or JSON data is missing
-        return jsonify({'success': False, 'message': 'Invalid or missing data.'})
+        # Validate the presence of both file and JSON data
+        if file and json_data:
+            try:
+                # Parse the JSON data
+                data = json.loads(json_data)
+                folder = data.get('folder')  # Folder to upload the file to
+                group_id = data.get("group")  # Group ID for the upload
+                # Ensure group ID is present
+                if group_id is None:
+                    return jsonify({'success': False, 'message': 'Group ID missing in data.'})
+            except (json.JSONDecodeError, TypeError):
+                # Handle errors in JSON parsing
+                return jsonify({'success': False, 'message': 'Could not parse JSON data.'})
+        else:
+            # Handle case where either file or JSON data is missing
+            return jsonify({'success': False, 'message': 'Invalid or missing data.'})
 
-    #try:
-    # Check if the user has appropriate permissions to upload the file
-    if (check_user_role(user_id, 'write', group_id) or 
-        check_user_role(user_id, 'local_admin', group_id) or 
-        check_user_is_admin(user_id)):
+        
+        # Check if the user has appropriate permissions to upload the file
+        if (check_user_role(user_id, 'write', group_id) or 
+            check_user_role(user_id, 'local_admin', group_id) or 
+            check_user_is_admin(user_id)):
 
-        # Securely generate a filename and save the file in the designated folder
-        filename = secure_filename(file.filename)
-        file_path = os.path.join(get_group_upload_folder(group_id, folder), filename)
-        file.save(file_path)
+            # Securely generate a filename and save the file in the designated folder
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(get_group_upload_folder(group_id, folder), filename)
+            file.save(file_path)
 
-        # Add a record of the file in the database
-        conn = sqlite3.connect(db_files_path)
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO files (group_id, filename, created_at, last_modified_by, size, folder) 
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (group_id, filename, datetime.now(), user_id, os.path.getsize(file_path), folder))
-        conn.commit()
-        conn.close() 
-
-        return jsonify({'success': True, 'message': 'File successfully uploaded.'})
-    else:
-        # Return a permission denied error if the user lacks appropriate rights
-        return jsonify({'success': False, 'message': 'Permission denied.'})
-    # except Exception as e:
-    #     # Handle any exceptions during file upload
-    #     print(f"Error uploading file: {e}")
-    #     return jsonify({'success': False, 'message': 'Error uploading file.' + str({e})})
+            # Add a record of the file in the database
+            conn = sqlite3.connect(db_files_path)
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO files (group_id, filename, created_at, last_modified_by, size, folder) 
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (group_id, filename, datetime.now(), user_id, os.path.getsize(file_path), folder))
+            conn.commit()
+            conn.close() 
+            # Retrieve the user's IP address and the current timestamp
+            ip_address = request.remote_addr
+            add_to_log("/upload_file", user_id, ip_address, "true", 'File successfully uploaded.')
+            return jsonify({'success': True, 'message': 'File successfully uploaded.'})
+        else:
+            # Return a permission denied error if the user lacks appropriate rights
+            return jsonify({'success': False, 'message': 'Permission denied.'})
+    except Exception as e:
+        # Handle any exceptions during file upload
+        return jsonify({'success': False, 'message': 'A server error has occurred.'})
 
 @app.route('/create_folder', methods=['POST'])
 @jwt_required()  # Ensure the user is authenticated via JWT
 def create_folder():
-    user_id = get_jwt_identity()  # Get the user's identity from the JWT
-
     try:
+        user_id = get_jwt_identity()  # Get the user's identity from the JWT
+        if user_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+
         # Parse the JSON data from the request
         data = request.get_json()
+        required_keys = ['folder_name', 'directory', 'group_id'] 
+        if not validate_json(data, required_keys):
+            return jsonify({'success': False, 'message': 'Invalid or missing data'})
+
         folder_name = data.get('folder_name')  # Name of the new folder
         directory = data.get('directory')  # Directory in which to create the folder
         group_id = data.get('group_id')  # Group ID under which the folder is being created
@@ -488,6 +733,9 @@ def create_folder():
         if not folder_name:
             # Validate the folder name input
             return jsonify({'success': False, 'message': 'Folder name required.'})
+
+        if not validate_id(group_id):
+            return jsonify({'success': False, 'message': 'Invalid group ID. The id must only consist of numbers.'})
 
         conn = sqlite3.connect(db_files_path)
         cursor = conn.cursor()
@@ -516,111 +764,90 @@ def create_folder():
 
         return jsonify({'success': True, 'message': 'New folder created.'})
     except Exception as e:
-        # Handle any exceptions during folder creation
-        print('Error creating folder:', str(e))
-        return jsonify({'success': False, 'message': str(e)}), 500
+        # Handle any exceptions during file upload
+        return jsonify({'success': False, 'message': 'A server error has occurred.'})
 
 @app.route('/delete_file', methods=['POST'])
 @jwt_required()  # Ensure the user is authenticated via JWT
 def delete_file():
-    user_id = get_jwt_identity()  # Get the user's identity from the JWT
-
-    # Check if the JWT token is valid
-    if user_id is None:
-        return jsonify({'success': False, 'message': 'Invalid token.'})
-
-    # Parse the JSON data from the request
-    if request.is_json:
-        data = request.json
-        folder_data = data.get('folder')
-        filename = data.get('filename', '')
-        group_id = data.get('group')
-        folder = json.loads(folder_data) if folder_data else ''
-    else:
-        return jsonify({'success': False, 'message': 'Invalid data format.'})
-
-    # Check if the filename is provided in the request
-    if not filename:
-        return jsonify({'success': False, 'message': 'Filename missing in the request.'})
-
-    # Check user permissions to delete the file or folder
-    if (check_user_role(user_id, 'write', group_id) or
-            check_user_role(user_id, 'local_admin', group_id) or
-            check_user_is_admin(user_id)):
-
-        # Create the path to the file or folder
-        path = os.path.join(get_group_upload_folder(group_id, folder), filename)
-
-        try:
-            error_message = ""
-            if os.path.isfile(path):
-                # Delete the file from the file system
-                os.remove(path)
-                # Update the database to remove the file entry
-                error_message = delete_db_entries(group_id, folder, filename, False)
-            elif os.path.isdir(path):
-                # Delete the folder and its contents from the file system
-                shutil.rmtree(path)
-                # Update the database to remove the folder entry and its contents
-                error_message = delete_db_entries(group_id, folder, filename, True)
-            else:
-                return jsonify({'success': False, 'message': 'Path does not exist.'})
-
-            return jsonify({'success': True, 'message': f'Successfully deleted. {str(error_message)}'})
-        except Exception as e:
-            # Handle any errors that occur during file/folder deletion
-            return jsonify({'success': False, 'message': f'Error while deleting: {str(e)}'})
-
-    else:
-        return jsonify({'success': False, 'message': 'Permission denied.'})
-
-def delete_db_entries(group_id, directory, filename, is_folder):
     try:
-        conn = sqlite3.connect(db_files_path)
-        cursor = conn.cursor()
+        user_id = get_jwt_identity()  # Get the user's identity from the JWT
+        if user_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
 
-        # Construct the path for the database entry
-        path_for_database = os.path.join(directory, filename) if filename else directory
+        data = request.json
+        required_keys = ['folder', 'filename', 'group']
+        if not validate_json(data, required_keys):
+            return jsonify({'success': False, 'message': 'Invalid or missing data'})
 
-        if is_folder:
-            # Delete the folder and its contents from the database
-            directory_pattern = path_for_database.rstrip('/')  # Remove a trailing slash if present
-            cursor.execute('DELETE FROM files WHERE group_id = ? AND ((folder = ? AND filename = ?) OR folder LIKE ?)', (group_id, directory, filename, f'{directory_pattern}/%'))
+        folder = data['folder']
+        filename = data['filename']
+        group_id = data['group']
+
+        if not validate_id(group_id):
+            return jsonify({'success': False, 'message': 'Invalid group ID. The id must only consist of numbers.'})
+
+        # Check user permissions
+        if not (check_user_role(user_id, 'write', group_id) or
+                check_user_role(user_id, 'local_admin', group_id) or
+                check_user_is_admin(user_id)):
+            return jsonify({'success': False, 'message': 'Permission denied.'})
+
+        # Build the full file path
+        file_path = os.path.join(get_group_upload_folder(group_id, folder), filename)
+
+        error_message = ""
+        # Check if the file exists
+        if not os.path.exists(file_path):
+            delete_db_entries(group_id, folder, filename, False)
+            delete_db_entries(group_id, folder, filename, True)
+            return jsonify({'success': False, 'message': 'File or folder does not exist.'}), 404
+
+        # Delete the file or folder
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+            error_message = delete_db_entries(group_id, folder, filename, False)
         else:
-            # Delete a single file entry from the database
-            cursor.execute('DELETE FROM files WHERE group_id = ? AND filename = ? AND folder = ?', (group_id, filename, directory))
+            shutil.rmtree(file_path)
+            error_message = delete_db_entries(group_id, folder, filename, True)
 
-        conn.commit()
-        conn.close()
+        # Log the deletion
+        ip_address = request.remote_addr
+        add_to_log("/delete_file", user_id, ip_address, "true", f'File or folder deleted: {file_path}')
 
-        # Return the directory path that was deleted
-        return directory
+        return jsonify({'success': True, 'message': f'File or folder successfully deleted. {str(error_message)}'})
     except Exception as e:
-        # Handle any errors that occur during database deletion
-        return str(e)
+        return jsonify({'success': False, 'message': f'A server error has occurred: {str(e)}'})
+
 
 @app.route('/files', methods=['POST'])
 @jwt_required()
 def get_user_files():
-    user_id = get_jwt_identity()
-    json_data = request.form.get('json')
-
-    print("Received JSON data:", json_data)  # Debugging
-
-    data = json.loads(json_data)
-    group_id = data.get("group")
-    folder = data.get('folder')
-    if group_id is None or folder is None:
-        return jsonify({'success': False, 'message': 'Group ID is missing.'})
-
     try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        user_id = get_jwt_identity()
+        if user_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+        
+        json_data = request.form.get('json')
+        data = json.loads(json_data)
+        required_keys = ['folder', 'group'] 
+        if not validate_json(data, required_keys):
+            return jsonify({'success': False, 'message': 'Invalid or missing data'})
+        
+        group_id = data.get("group")
+        folder = data.get('folder')
+        if group_id is None or folder is None:
+            return jsonify({'success': False, 'message': 'Group ID is missing.'})
+
+        if not validate_id(group_id):
+            return jsonify({'success': False, 'message': 'Invalid group ID. The id must only consist of numbers.'})
 
         # Check user permissions
         if not (check_user_role(user_id, 'read', group_id) or check_user_role(user_id, 'local_admin', group_id) or check_user_is_admin(user_id)):
-            conn.close()
             return jsonify({'success': False, 'message': 'Permission denied.'})
+
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
         
         # Get usernames from the user database
         cursor.execute('SELECT user_id, username FROM users')
@@ -655,52 +882,66 @@ def get_user_files():
         ]
 
         return jsonify({'success': True, 'files_and_folders': files_and_folders})
-    except sqlite3.Error as e:
-        print(f'Database error: {e}')
-        return jsonify({'success': False, 'message': 'Database error occurred.'})
-
-
+    except Exception as e:
+        # Handle any exceptions during file upload
+        return jsonify({'success': False, 'message': 'A server error has occurred.'})
 
 @app.route('/download_file', methods=['POST'])  # This route handles file downloads using POST method
 @jwt_required()  # Requires a valid JWT (JSON Web Token) for authentication
 def download_file():
-    user_id = get_jwt_identity()  # Get the user's identity from the JWT
+    try:
+        user_id = get_jwt_identity()  # Get the user's identity from the JWT
+        if user_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
 
-    # Extract file name, folder, and group ID from the JSON data in the request body
-    if request.is_json:
         data = request.json
+        required_keys = ['folder', 'filename', 'group'] 
+        if not validate_json(data, required_keys):
+            return jsonify({'success': False, 'message': 'Invalid or missing data'})
+
         folder = data.get('folder')  # The folder where the file is located
         filename = data.get('filename')  # The name of the file to be downloaded
         group_id = data.get('group')  # The ID of the group that owns the file
 
-    if user_id is None:
-        return jsonify({'success': False, 'message': 'Invalid token.'})
+        if user_id is None:
+            return jsonify({'success': False, 'message': 'Invalid token.'})
 
-    # Check user permissions
-    if not (check_user_role(user_id, 'read', group_id) or check_user_role(user_id, 'local_admin', group_id) or check_user_is_admin(user_id)):
-        return jsonify({'success': False, 'message': 'Permission denied.'})
+        if not validate_id(group_id):
+            return jsonify({'success': False, 'message': 'Invalid group ID. The id must only consist of numbers.'})
 
-    # Build the full file path by combining the group's upload folder, folder, and filename
-    file_path = os.path.join(get_group_upload_folder(group_id, folder), filename)
+        # Check user permissions
+        if not (check_user_role(user_id, 'read', group_id) or check_user_role(user_id, 'local_admin', group_id) or check_user_is_admin(user_id)):
+            return jsonify({'success': False, 'message': 'Permission denied.'})
 
-    if not os.path.isfile(file_path):
-        return jsonify({'success': False, 'message': 'File not found.'}), 404
+        # Build the full file path by combining the group's upload folder, folder, and filename
+        file_path = os.path.join(get_group_upload_folder(group_id, folder), filename)
 
-    # Determine the MIME type of the file (e.g., 'application/pdf', 'image/jpeg')
-    mimetype, _ = mimetypes.guess_type(filename)
+        if os.path.isdir(file_path):
+            return jsonify({'success': False, 'message': 'A directory cannot be downloaded.'}), 404
 
-    # Prepare the file for download as an attachment in the response
-    response = make_response(send_file(file_path, as_attachment=True))
+        if not os.path.isfile(file_path):
+            delete_db_entries(group_id, folder, filename, False)
+            return jsonify({'success': False, 'message': 'File not found.'}), 404
 
-    # Set the Content-Disposition header to suggest a filename when downloading
-    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        # Determine the MIME type of the file (e.g., 'application/pdf', 'image/jpeg')
+        mimetype, _ = mimetypes.guess_type(filename)
 
-    # Set the Content-Type header to specify the file's MIME type
-    response.headers['Content-Type'] = mimetype
+        # Prepare the file for download as an attachment in the response
+        response = make_response(send_file(file_path, as_attachment=True))
 
-    return response  # Return the response for file download
+        # Set the Content-Disposition header to suggest a filename when downloading
+        response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+
+        # Set the Content-Type header to specify the file's MIME type
+        response.headers['Content-Type'] = mimetype
+
+        return response  # Return the response for file download
+    except Exception as e:
+        # Handle any exceptions during file upload
+        return jsonify({'success': False, 'message': 'A server error has occurred.'})
     
 @app.route('/users', methods=['GET'])
+@jwt_required()
 def get_users():
     conn = get_db_connection()
     
@@ -712,6 +953,7 @@ def get_users():
     return jsonify([dict(user) for user in users])
 
 @app.route('/groups', methods=['GET'])
+@jwt_required()
 def get_groups():
     conn = get_db_connection()
     
@@ -725,8 +967,11 @@ def get_groups():
 @app.route('/my_groups', methods=['GET'])
 @jwt_required()
 def get_my_groups():
-    user_id = get_jwt_identity()
     try:
+        user_id = get_jwt_identity()
+        if user_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+    
         # Establish a database connection
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -748,8 +993,8 @@ def get_my_groups():
         # Return a JSON response with the user's groups
         return jsonify({'success': True, 'groups': groups_list})
     except Exception as e:
-        print('Error retrieving user groups:', str(e))
-        return jsonify({'success': False, 'message': 'Internal Server Error'}), 500
+        # Handle any exceptions during file upload
+        return jsonify({'success': False, 'message': 'A server error has occurred.'})
 
 @app.route('/user_groups/<username>', methods=['GET'])
 def get_user_groups(username):
@@ -759,7 +1004,7 @@ def get_user_groups(username):
         cursor = conn.cursor()
 
         # Retrieve the user's ID based on the provided username
-        user_id_result = get_user_id(username)
+        user_id_result = get_user_id(str(username))
 
         # Check if the user exists
         if not user_id_result:
@@ -793,6 +1038,10 @@ def get_user_groups(username):
 @app.route('/group_members', methods=['POST'])
 def get_group_members():
     data = request.json
+    required_keys = ['group_name'] 
+    if not validate_json(data, required_keys):
+        return jsonify({'success': False, 'message': 'Invalid or missing data'})
+    
     group_name = data.get('group_name')
     conn = get_db_connection()
 
@@ -813,6 +1062,10 @@ def get_group_members():
 
 @app.route('/user_rights/<username>', methods=['GET'])
 def get_user_rights(username):
+
+    if not validate_name(str(username), 3, 25):
+        return jsonify({'success': False, 'message': 'Invalid username.'})
+    
     conn = get_db_connection()
     
     # Join users, user_rights, and rights to retrieve usernames and rights
@@ -823,7 +1076,7 @@ def get_user_rights(username):
     JOIN rights r ON ur.right_id = r.right_id
     WHERE u.username = ?
     '''
-    user_rights = conn.execute(query, (username,)).fetchall()
+    user_rights = conn.execute(query, (str(username),)).fetchall()
     
     conn.close()
     
@@ -834,11 +1087,18 @@ def get_user_rights(username):
 def get_user_group_rights():
     # Extract user name and group ID from the JSON data in the request body
     data = request.json
+    required_keys = ['username', 'group_id'] 
+    if not validate_json(data, required_keys):
+        return jsonify({'success': False, 'message': 'Invalid or missing data'})
+    
     username = data.get('username')
     group_id = data.get('group_id')
 
     if not username or not group_id:
         return jsonify({'error': 'Please provide both a username and a group name.'}), 400
+
+    if not validate_id(group_id):
+        return jsonify({'success': False, 'message': 'Invalid group ID. The id must only consist of numbers.'})
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -862,126 +1122,238 @@ def get_user_group_rights():
 @app.route('/change_password', methods=['POST'])
 @jwt_required()
 def change_password():
-    changing_user_id = get_jwt_identity()  # Ensure that the user is logged in
-    conn = get_db_connection()
-    
-    # Extract user name and new password from the JSON data in the request body
-    data = request.get_json()
-    username = data.get('username')
-    new_password = data.get('new_password')
-    user_id = get_user_id(username)  # Get the user_id associated with the provided username
-    
-    if user_id:
-        # Check if the user requesting the password change is an admin or the same user
-        if(check_user_is_admin(user_id) or changing_user_id == user_id):
-            if not new_password:
-                return jsonify({'success': False, 'message': 'New password is missing.'})
+    try:
+        changing_user_id = get_jwt_identity()  # Ensure that the user is logged in
+        if changing_user_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
 
-            # Generate a hashed password and update it in the database
-            hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
-            conn.execute('UPDATE users SET hashed_password = ? WHERE user_id = ?', (hashed_password, user_id))
-            conn.commit()
-            conn.close()
+        conn = get_db_connection()
+        
+        # Extract user name and new password from the JSON data in the request body
+        data = request.get_json()
+        required_keys = ['username', 'new_password'] 
+        if not validate_json(data, required_keys):
+            return jsonify({'success': False, 'message': 'Invalid or missing data'})
 
-            return jsonify({'success': True, 'message': 'Password successfully changed.'})
-        else:
-            conn.close()
-            return jsonify({'success': True, 'message': 'Permission denied.'})
-    return({'success': False, 'message': 'No User'})  # Return a failure message if the user doesn't exist
+        username = data.get('username')
+        new_password = data.get('new_password')
+        user_id = get_user_id(username)  # Get the user_id associated with the provided username
+
+    # Validate the username input
+        if not validate_name(username, 3, 25):
+            return jsonify({'success': False, 'message': 'Invalid username. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
+
+        # At least 8 characters, at least one letter and one number
+        if not validate_password(new_password):
+            return jsonify({'success': False, 'message': 'Invalid password. At least 8 characters, at least one letter and one number are required.'})
+        
+        if user_id:
+            # Check if the user requesting the password change is an admin or the same user
+            if(check_user_is_admin(user_id) or changing_user_id == user_id):
+                if not new_password:
+                    return jsonify({'success': False, 'message': 'New password is missing.'})
+
+                # Generate a hashed password and update it in the database
+                hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+                conn.execute('UPDATE users SET hashed_password = ? WHERE user_id = ?', (hashed_password, user_id))
+                conn.commit()
+                conn.close()
+                
+                # Retrieve the user's IP address and the current timestamp
+                ip_address = request.remote_addr
+                add_to_log("/change_password", user_id, ip_address, "true", 'Password successfully changed.')
+                return jsonify({'success': True, 'message': 'Password successfully changed.'})
+            else:
+                conn.close()
+                return jsonify({'success': True, 'message': 'Permission denied.'})
+        return({'success': False, 'message': 'No User'})  # Return a failure message if the user doesn't exist
+    except Exception as e:
+        # Handle any exceptions during file upload
+        return jsonify({'success': False, 'message': 'A server error has occurred.'})
 
 
 @app.route('/change_username', methods=['POST'])
 @jwt_required()
 def change_username():
-    changing_user_id = get_jwt_identity()  # Ensure that the user is logged in
-    conn = get_db_connection()
-    data = request.get_json()
-    username = data.get('username')  # The current username
-    new_username = data.get('new_username')  # The new desired username
+    try:
+        changing_user_id = get_jwt_identity()  # Ensure that the user is logged in
+        if changing_user_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
 
-    user_id = get_user_id(username)  # Get the user_id associated with the current username
-    
-    if user_id:
-        # Check if the user requesting the username change is an admin or the same user
-        if(check_user_is_admin(changing_user_id) or changing_user_id == user_id):
-            if not new_username:
+        data = request.get_json()
+        required_keys = ['username', 'new_username'] 
+        if not validate_json(data, required_keys):
+            return jsonify({'success': False, 'message': 'Invalid or missing data'})
+        
+        username = data.get('username')  # The current username
+        new_username = data.get('new_username')  # The new desired username
+
+        user_id = get_user_id(username)  # Get the user_id associated with the current username
+
+        # Validate the username input
+        if not validate_name(username, 3, 25):
+            return jsonify({'success': False, 'message': 'Invalid username. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
+        
+        # Validate the new_username input
+        if not validate_name(username, 3, 25):
+            return jsonify({'success': False, 'message': 'Invalid new username. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
+
+        if user_id:
+            # Check if the user requesting the username change is an admin or the same user
+            if(check_user_is_admin(changing_user_id) or changing_user_id == user_id):
+                if not new_username:
+                    return jsonify({'success': False, 'message': 'New username is missing.'})
+                
+                conn = get_db_connection()
+                # Update the username in the database
+                conn.execute('UPDATE users SET username = ? WHERE user_id = ?', (new_username, user_id))
+                conn.commit()
                 conn.close()
-                return jsonify({'success': False, 'message': 'New username is missing.'})
-
-            # Update the username in the database
-            conn.execute('UPDATE users SET username = ? WHERE user_id = ?', (new_username, user_id))
-            conn.commit()
-            conn.close()
-
-            return jsonify({'success': True, 'message': 'Username successfully changed.'})
+                # Retrieve the user's IP address and the current timestamp
+                ip_address = request.remote_addr
+                add_to_log("/change_username", user_id, ip_address, "true", 'Username successfully changed.')
+                return jsonify({'success': True, 'message': 'Username successfully changed.'})
+            else:
+                conn.close()
+                return jsonify({'success': False, 'message': 'Permission denied.'})
         else:
             conn.close()
-            return jsonify({'success': False, 'message': 'Permission denied.'})
-    else:
-        conn.close()
-        return jsonify({'success': False, 'message': 'Username not found.'})
+            return jsonify({'success': False, 'message': 'Username not found.'})
+    except Exception as e:
+        # Handle any exceptions during file upload
+        return jsonify({'success': False, 'message': 'A server error has occurred.'})
 
 
 
 @app.route('/change_user_rights', methods=['POST'])
 @jwt_required()
 def change_user_rights():
-    admin_id = get_jwt_identity()  # The administrator making the changes
-    conn = get_db_connection()
-    data = request.get_json()
-    username = data.get('username')  # The username of the user whose rights are being changed
-    new_rights = data.get('new_rights')  # A list of right_ids to assign to the user
+    try:
+        admin_id = get_jwt_identity()  # The administrator making the changes
+        if admin_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+        
+        data = request.get_json()
+        required_keys = ['username', 'new_rights'] 
+        if not validate_json(data, required_keys):
+            return jsonify({'success': False, 'message': 'Invalid or missing data'})
+        username = data.get('username')  # The username of the user whose rights are being changed
+        new_rights = data.get('new_rights')  # A list of right_ids to assign to the user
 
-    user_id = get_user_id(username)  # Get the user_id associated with the given username
-    
-    if user_id:
-        # Check if the user making the request is an admin
-        if(check_user_is_admin(admin_id)):
-            # Remove all old rights first
-            conn.execute('DELETE FROM user_rights WHERE user_id = ?', (user_id,))
-            
-            # Load the right_ids from the database
-            rights_name_to_id = {row['right_name']: row['right_id'] for row in conn.execute('SELECT right_id, right_name FROM rights')}
-            
-            # Prepare the new rights (remove duplicates and ensure they exist in the database)
-            unique_new_right_ids = {rights_name_to_id[right] for right in new_rights if right in rights_name_to_id}
+        user_id = get_user_id(username)  # Get the user_id associated with the given username
 
-            # Assign the new rights to the user
-            for right_id in unique_new_right_ids:
-                conn.execute('INSERT INTO user_rights (user_id, right_id) VALUES (?, ?)', (user_id, right_id))
-            conn.commit()
-            conn.close()
+        # Validate the username input
+        if not validate_name(username, 3, 25):
+            return jsonify({'success': False, 'message': 'Invalid username. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
+        
+        if user_id:
+            # Check if the user making the request is an admin
+            if(check_user_is_admin(admin_id)):
+                conn = get_db_connection()
 
-            return jsonify({'success': True, 'message': 'User rights successfully changed.'})
+                # Query the current rights of the user
+                query = '''
+                SELECT r.right_name
+                FROM users u
+                JOIN user_rights ur ON u.user_id = ur.user_id
+                JOIN rights r ON ur.right_id = r.right_id
+                WHERE u.username = ?
+                '''
+                current_rights = conn.execute(query, (username,)).fetchall()
+                current_rights = [row['right_name'] for row in current_rights]
+
+                # Check whether "owner" rights are removed
+                removing_owner = 'owner' in new_rights and 'owner' not in current_rights
+
+                if removing_owner:
+                    if not check_user_role(admin_id, 'owner'):
+                        conn.close()
+                        return jsonify({'success': False, 'message': 'Permission denied.'})
+                    
+                    # Check the number of current owners in the database
+                    cursor.execute('SELECT COUNT(*) FROM user_rights JOIN rights ON user_rights.right_id = rights.right_id WHERE right_name = "owner"')
+                    owner_count = cursor.fetchone()[0]
+
+                    if owner_count <= 1:
+                        conn.close()
+                        return jsonify({'success': False, 'message': 'Can not remove the only owner.'})
+
+                # Remove all old rights first
+                conn.execute('DELETE FROM user_rights WHERE user_id = ?', (user_id,))
+                
+                # Load the right_ids from the database
+                rights_name_to_id = {row['right_name']: row['right_id'] for row in conn.execute('SELECT right_id, right_name FROM rights')}
+                
+                # Prepare the new rights (remove duplicates and ensure they exist in the database)
+                unique_new_right_ids = {rights_name_to_id[right] for right in new_rights if right in rights_name_to_id}
+
+                # Assign the new rights to the user
+                for right_id in unique_new_right_ids:
+                    conn.execute('INSERT INTO user_rights (user_id, right_id) VALUES (?, ?)', (user_id, right_id))
+                conn.commit()
+                conn.close()
+                # Retrieve the user's IP address and the current timestamp
+                ip_address = request.remote_addr
+                add_to_log("/change_user_rights", user_id, ip_address, "true", 'User rights successfully changed.')
+                return jsonify({'success': True, 'message': 'User rights successfully changed.'})
+            else:
+                conn.close()
+                return jsonify({'success': True, 'message': 'Permission denied.'})
         else:
-            conn.close()
-            return jsonify({'success': True, 'message': 'Permission denied.'})
-    else:
-        return jsonify({'success': False, 'message': 'No User'})
+            return jsonify({'success': False, 'message': 'No User'})
+    except Exception as e:
+        # Handle any exceptions during file upload
+        return jsonify({'success': False, 'message': 'A server error has occurred.'})
 
 
 @app.route('/change_group_rights', methods=['POST'])
 @jwt_required()
 def change_group_rights():
-    admin_id = get_jwt_identity()  # The administrator making the changes
-    conn = get_db_connection()
-    
-    data = request.get_json()
-    username = data.get('username')  # The username of the user whose group rights are being changed
-    group_id = data.get('group_id')  # The ID of the group whose rights are being changed
-    new_rights = data.get('new_rights')  # A list of right names to assign to the user in the group
-
-    if group_id == "null":
-        return jsonify({'success': False})
-
-    # Check if the user making the request is an admin
-    if not (check_user_is_admin(admin_id)):
-        return jsonify({'success': True, 'message': 'Permission denied.'})
-
-    user_id = get_user_id(username)  # Get the user_id associated with the given username
-    cursor = conn.cursor()
-
     try:
+        admin_id = get_jwt_identity()  # The administrator making the changes
+        if admin_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+                
+        data = request.get_json()
+        required_keys = ['username', 'group_id', 'new_rights'] 
+        if not validate_json(data, required_keys):
+            return jsonify({'success': False, 'message': 'Invalid or missing data'})
+
+        username = data.get('username')  # The username of the user whose group rights are being changed
+        group_id = data.get('group_id')  # The ID of the group whose rights are being changed
+        new_rights = data.get('new_rights')  # A list of right names to assign to the user in the group
+
+        # Validate the username input
+        if not validate_name(username, 3, 25):
+            return jsonify({'success': False, 'message': 'Invalid username. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
+
+        if not validate_id(group_id):
+            return jsonify({'success': False, 'message': 'Invalid group ID. The id must only consist of numbers.'})
+
+        if group_id == "null":
+            return jsonify({'success': False})
+
+        # Check if the user making the request is an admin
+        if not (check_user_is_admin(admin_id)):
+            return jsonify({'success': True, 'message': 'Permission denied.'})
+
+        user_id = get_user_id(username)  # Get the user_id associated with the given username
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Prüfen, ob "owner" Rechte entfernt werden
+        removing_owner = 'owner' in new_rights and check_user_role(user_id, 'owner')
+        
+        if removing_owner:
+            # Anzahl der aktuellen Besitzer in der Datenbank überprüfen
+            cursor.execute('SELECT COUNT(*) FROM user_rights JOIN rights ON user_rights.right_id = rights.right_id WHERE right_name = "owner"')
+            owner_count = cursor.fetchone()[0]
+
+            if owner_count <= 1:
+                conn.close()
+                return jsonify({'success': False, 'message': 'Can not remove the last owner.'})
+
         # Remove all old group rights of the user in this group
         cursor.execute('DELETE FROM group_members WHERE user_id = ? AND group_id = ?', (user_id, group_id))
 
@@ -995,45 +1367,78 @@ def change_group_rights():
 
         conn.commit()
         conn.close()
+        # Retrieve the user's IP address and the current timestamp
+        ip_address = request.remote_addr
+        add_to_log("/change_group_rights", user_id, ip_address, "true", 'User rights successfully changed.')
         return jsonify({'success': True, 'message': 'Group rights successfully changed.'})
-    except sqlite3.Error as e:
-        return jsonify({'success': False, 'message': 'Error'})
+    except Exception as e:
+        # Handle any exceptions during file upload
+        return jsonify({'success': False, 'message': 'A server error has occurred.'})
 
 @app.route('/change_user_groups', methods=['POST'])
 @jwt_required()
 def change_user_groups():
-    admin_id = get_jwt_identity()  # The administrator making the changes
-    conn = get_db_connection()
-    
-    data = request.get_json()
-    username = data.get('username')  # The username of the user whose groups are being changed
-    new_groups = data.get('new_groups')  # A list of group_ids to assign to the user
+    try:
+        admin_id = get_jwt_identity()  # The administrator making the changes
+        if admin_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+        
+        data = request.get_json()
+        required_keys = ['username', 'new_groups'] 
+        if not validate_json(data, required_keys):
+            return jsonify({'success': False, 'message': 'Invalid or missing data'})
 
-    user_id = get_user_id(username)  # Get the user_id associated with the given username
-    if user_id:
-        if(check_user_is_admin(admin_id)):
-            # Remove all old groups first
-            conn.execute('DELETE FROM group_members WHERE user_id = ?', (user_id,))
-            # then add the new groups
+        username = data.get('username')  # The username of the user whose groups are being changed
+        new_group_name = data.get('new_groups')  # A list of group_ids to assign to the user
 
-            # Prepare the new groups (remove duplicates)
-            unique_new_groups = set(new_groups)
+        # Validate the username input
+        if not validate_name(username, 3, 25):
+            return jsonify({'success': False, 'message': 'Invalid username. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
+        
+        if not validate_name(new_group_name, 3, 25):        
+            return jsonify({'success': False, 'message': 'Invalid group name. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
 
-            for group_id in unique_new_groups:
-                conn.execute('INSERT INTO group_members (user_id, group_id) VALUES (?, ?)', (user_id, group_id))
-            conn.commit()
-            conn.close()
+        user_id = get_user_id(username)  # Get the user_id associated with the given username
+        if user_id:
+            if(check_user_is_admin(admin_id)):
+                conn = get_db_connection()
+                # Remove all old groups first
+                conn.execute('DELETE FROM group_members WHERE user_id = ?', (user_id,))
+                # then add the new groups
 
-            return jsonify({'success': True, 'message': 'User groups successfully changed.'})
+                # Prepare the new groups (remove duplicates)
+                unique_new_groups = set(new_group_name)
+
+                for group_id in unique_new_groups:
+                    conn.execute('INSERT INTO group_members (user_id, group_id) VALUES (?, ?)', (user_id, group_id))
+                conn.commit()
+                conn.close()
+
+                return jsonify({'success': True, 'message': 'User groups successfully changed.'})
+            else:
+                return jsonify({'success': True, 'message': 'Permission denied.'})
         else:
-            conn.close()
-            return jsonify({'success': True, 'message': 'Permission denied.'})
-    else:
-        return jsonify({'success': False, 'message': 'No User'})
+            return jsonify({'success': False, 'message': 'No User'})
+    except Exception as e:
+        # Handle any exceptions during file upload
+        return jsonify({'success': False, 'message': 'A server error has occurred.'})
 
 if __name__ == '__main__':
-    # Check if SSL certificates exist, and run the app accordingly
-    if not (os.path.exists('/etc/letsencrypt/live/raspi.cloud/fullchain.pem') or os.path.exists('/etc/letsencrypt/live/raspi.cloud/privkey.pem')):
-        app.run(host='0.0.0.0', port=8080, debug=False)
-    else:
-        app.run(host='0.0.0.0', port=8080, debug=False, ssl_context=('/etc/letsencrypt/live/raspi.cloud/fullchain.pem', '/etc/letsencrypt/live/raspi.cloud/privkey.pem'))
+    # Laden der Konfigurationsvariablen aus der config.env Datei
+    SCRIPT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+    load_dotenv(os.path.join("/var/www", 'config.env'))
+
+    # Lesen des Domain-Namens aus den Umgebungsvariablen
+    DOMAIN_NAME = os.getenv('DOMAIN_NAME')
+
+    # Pfad zu den SSL-Zertifikaten basierend auf dem Domain-Namen
+    FULLCHAIN_PATH = f'/etc/letsencrypt/live/{DOMAIN_NAME}/fullchain.pem'
+    PRIVKEY_PATH = f'/etc/letsencrypt/live/{DOMAIN_NAME}/privkey.pem'
+
+    if __name__ == '__main__':
+        # Überprüfen, ob SSL-Zertifikate existieren, und die App entsprechend ausführen
+        if not (os.path.exists(FULLCHAIN_PATH) and os.path.exists(PRIVKEY_PATH)):
+            app.run(host='0.0.0.0', port=8080, debug=False)
+        else:
+            app.run(host='0.0.0.0', port=8080, debug=False, ssl_context=(FULLCHAIN_PATH, PRIVKEY_PATH))
+

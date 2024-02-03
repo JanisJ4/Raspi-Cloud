@@ -29,7 +29,7 @@ function goHome() {
     localStorage.setItem('filepath', '');
     loadGroupFiles();
     // Update directory buttons (commented out)
-} 
+}
 
 // Function to start the file upload process
 function uploadFile() {
@@ -188,24 +188,29 @@ function updateDirectoryButtons() {
         backButton.textContent = 'Groups';
         backButton.classList.add('backButton');
         backButton.onclick = () => {
+            // Set the path in local storage to the root and load group files
+            localStorage.setItem('filepath', '');
             loadUserGroups();
             linkContainer.innerHTML = ""; // Clear existing buttons
         };
         linkContainer.appendChild(backButton);
     }
 
-    // Create a home link
-    const homelink = document.createElement("a");
-    homelink.href = 'javascript:void(0)';
-    homelink.textContent = 'Home';
-    homelink.style.fontSize = 'var(--normal-text-size)';
-    homelink.addEventListener("click", () => {
-        goHome();
-    });
-    linkContainer.appendChild(homelink);
-
     // Create buttons for each directory in the path
-    for (let i = 0; i < directories.length - 1; i++) {
+    for (let i = 0; i < directories.length; i++) {
+        if (i == 0) {
+            // Create a home link
+            const homelink = document.createElement("a");
+            homelink.href = 'javascript:void(0)';
+            homelink.textContent = 'Home';
+            homelink.style.fontSize = 'var(--normal-text-size)';
+            homelink.addEventListener("click", () => {
+                goHome();
+            });
+            linkContainer.appendChild(homelink);
+            break;
+        }
+
         const link = document.createElement("a");
         link.href = 'javascript:void(0)';
         link.textContent = directories[i];
@@ -287,7 +292,10 @@ async function loadUserGroups() {
         // Make a GET request to the server to retrieve user groups
         const response = await fetch(url, {
             method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }, // Include the authentication token in the request headers
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }, // Include the authentication token in the request headers
         });
 
         // Check if the response from the server is successful
