@@ -27,7 +27,7 @@ Performance in file transfer was analyzed for different file sizes (1MB, 10MB, 1
 
 #### Average Upload and Download Time
 
-![Performance Graph](statistics/performance_graphs.png)
+![Performance Graph](performance_graphs.png)
 
 ### Efficiency
 
@@ -35,7 +35,7 @@ To assess the efficiency, CPU usage was monitored during the file upload and dow
 
 #### CPU Usage During Upload and Download
 
-![Performance Graph](statistics/efficiency_graphs.png)
+![Performance Graph](efficiency_graphs.png)
 
 ### Results and Analysis
 
