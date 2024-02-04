@@ -148,6 +148,12 @@ For questions or discussions about ideas and implementations, use the issue trac
 
 Raspi-Cloud appreciates all contributions and looks forward to seeing how the project evolves with the support of the open-source community.
 
+## More Informations
+
+### Tests on the performance and efficiency of the Raspi-Cloud
+
+[Experiments_and_Results.md](https://github.com/JanisJ4/Raspi-Cloud/blob/main/statistics/Experiments_and_Results.md)
+
 ## License
 
 Raspi-Cloud is made available under the MIT License. This license allows for personal and commercial use, modification, distribution, and private use of the software, offering great flexibility to users and contributors.
@@ -156,4 +162,4 @@ While Raspi-Cloud itself is licensed under the MIT License, it also utilizes var
 
 The MIT License is concise and permissive, allowing for almost any use of the project, including the creation and distribution of closed source versions, as long as proper attribution is given to Raspi-Cloud and it is not held liable for any outcomes.
 
-For the full terms and conditions of the MIT License, as well as a more detailed description, please refer to the [LICENSE.md](https://github.com/JanisJ4/Raspi-Cloud/blob/main/LICENSE) file in the project repository.
+For the full terms and conditions of the MIT License, as well as a more detailed description, please refer to the [LICENSE](https://github.com/JanisJ4/Raspi-Cloud/blob/main/LICENSE) file in the project repository.
