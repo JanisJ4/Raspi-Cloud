@@ -72,7 +72,10 @@ function createFolder() {
                     group_id: localStorage.getItem('group')
                 })
             })
-                .then(response => response.json())
+                .then(response => {
+                    checkForTokenExpiration(response);
+                    return response.json();
+                })
                 .then(data => {
                     // Reload group files on success or display an error message
                     if (data.success) {
@@ -265,6 +268,8 @@ async function loadGroupFiles() {
             },
             body: formData  // Send the JSON body directly without using Blob and FormData
         });
+
+        checkForTokenExpiration(response);
         const data = await response.json();
         if ('message' in data) {
             const fileList = document.getElementById('fileList');
@@ -299,9 +304,7 @@ async function loadUserGroups() {
         });
 
         // Check if the response from the server is successful
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
+        checkForTokenExpiration(response);
 
         const responseData = await response.json(); // Parse the JSON response
         // Check if the response indicates success
@@ -386,7 +389,13 @@ function showGroupFiles(filesAndFolders) {
         let actionButton = document.createElement('div');
         actionButton.classList.add('fileButton', 'actionButton');
         // Determine the action button based on whether the item is a folder or file
-        if (item.is_folder) {
+
+        if (!item.is_folder && item.name.endsWith('.txt')) {
+            listItem.classList.add('is-text');
+            // File is a text file, set edit event
+            actionButton.innerHTML = '<i class="fa fa-edit"></i>'; // Icon for editing
+            actionButton.addEventListener('click', () => editTxtFile(item.name)); // Event handler for editing
+        } else if (item.is_folder) {
             listItem.classList.add('is-folder');
 
             actionButton.innerHTML = '<i class="fa fa-folder"></i>'; // Icon for folder
@@ -411,6 +420,27 @@ function showGroupFiles(filesAndFolders) {
         listItem.appendChild(moreButton);
         fileList.appendChild(listItem);
     });
+}
+
+async function editTxtFile(filename) {
+    // Assuming there is a function that returns the content as text
+    try {
+        const content = await fetchFileContent(filename); // This function must be implemented
+        document.getElementById('textEditor').value = content;
+        // Save the current file name for use when saving
+        localStorage.setItem('currentEditingFile', filename);
+        // Display the text editor modal
+        document.getElementById('textEditorModal').style.display = 'block';
+    } catch (error) {
+        console.error('Error loading file:', error);
+    }
+}
+
+// Function to save the edited text file
+async function saveTextFile() {
+    const filename = localStorage.getItem('currentEditingFile');
+    const editedContent = document.getElementById('textEditor').value;
+    await saveEditedFile(filename, editedContent);
 }
 
 // Function to show a detailed menu for an item
@@ -521,9 +551,8 @@ async function deleteFile(filename) {
         });
 
         // Check for successful response
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
+        checkForTokenExpiration(response);
+
         const data = await response.json();
 
         // Handle the response after deletion
@@ -564,9 +593,7 @@ async function downloadFile(filename) {
         });
 
         // Check for a successful server response
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
+        checkForTokenExpiration(response);
 
         const blob = await response.blob(); // Get the blob data from the response
         let correctedFilename = filename;
@@ -586,10 +613,100 @@ async function downloadFile(filename) {
     }
 }
 
+// Function to return the content of a file as text
+async function fetchFileContent(filename) {
+    // Retrieve authentication token
+    const token = getCookie('token');
+    const folder = localStorage.getItem('filepath'); // Retrieve current folder from local storage
+
+    const url = `${protocol}//${serverIP}:${serverPort}/download_file`; // Construct URL for the download request
+
+    const requestBody = {
+        filename: filename,
+        folder: folder,
+        group: localStorage.getItem('group') // Retrieve current group ID from local storage
+    };
+
+    try {
+        // Send a POST request to the server to initiate the file download
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`, // Include tokens in the request headers
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        // Check for successful server response
+        checkForTokenExpiration(response);
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok.');
+        }
+
+        // Convert the blob data from the response into text
+        const text = await response.text();
+        return text; // Return text
+    } catch (error) {
+        console.error('Error at fetch:', error); // Log all errors to the console
+        throw error;
+    }
+}
+
 // Function to open the file selection dialog
 function openFileSelection() {
     const fileInput = document.getElementById('fileInput'); // Get the file input element
     fileInput.click(); // Programmatically click the file input to open the file dialog
+}
+
+async function saveEditedFile(filename, editedContent) {
+    // Retrieve the authentication token
+    const token = getCookie('token');
+    const folder = localStorage.getItem('filepath'); // Get the current folder from local storage
+
+    const url = `${protocol}//${serverIP}:${serverPort}/upload_file`; // Construct the URL for the upload request
+
+    // Convert edited content to a File object
+    const blob = new Blob([editedContent], { type: 'text/plain' });
+    const file = new File([blob], filename, { type: 'text/plain' });
+
+    // Prepare the JSON body with folder and group information
+    const jsonBody = JSON.stringify({
+        folder: folder,
+        group: localStorage.getItem('group') // Get the current group ID from local storage
+    });
+
+    const formData = new FormData();
+    formData.append('file', file); // Append the edited file to the FormData object
+    formData.append('json', jsonBody); // Append the JSON data as a string
+
+    try {
+        // Send a POST request to the server to upload the file
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`, // Include the token in the request headers
+            },
+            body: formData, // Send the FormData object containing the file and JSON data
+        });
+
+        // Check for a successful server response
+        checkForTokenExpiration(response);
+
+        const data = await response.json(); // Parse the JSON response
+
+        // Check the response data for success or failure
+        if (data.success) {
+            alert('File saved successfully.');
+            loadGroupFiles(); // Reload the group files to reflect the uploaded file
+            closeModal('textEditorModal'); // Close the editor modal
+        } else {
+            alert('Error while uploading: ' + data.message); // Alert if the upload fails
+        }
+    } catch (error) {
+        console.error('Error during fetch:', error); // Log any errors to the console
+    }
 }
 
 // Function to handle the file upload process
@@ -629,9 +746,7 @@ async function handleFileUpload() {
         });
 
         // Check for a successful server response
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
+        checkForTokenExpiration(response);
 
         const data = await response.json(); // Parse the JSON response
 

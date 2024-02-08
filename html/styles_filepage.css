@@ -178,6 +178,29 @@ ul li:last-child {
     cursor: pointer; /* Cursor changes on hover */
     transition: background-color 0.2s; /* Smooth background color change on hover */
 }
+
+.editor-content {
+    background-color: var(--background-color);
+    margin: 15vh auto; /* 15% from the top and centered */
+    padding: 20px;
+    border: none;
+    border-radius: 10px;
+    width: 80%; /* Could be more or less, depending on screen size */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+    position: relative;
+}
+
+#textEditor {
+    width: calc(100% - 40px); /* Adjust width to ensure padding does not cause issues */
+    margin-top: 30px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border-line);
+    font-family: Arial, sans-serif;
+    font-size: var(--normal-text-size);
+    color: var(--text-color);
+    background-color: var(--background-color);
+    resize: vertical; /* Allow only vertical resizing */
+}
  
 /* Media query for small screens (max-width: 768px) */
 @media only screen and (max-width: 768px) {
@@ -221,6 +244,11 @@ ul li:last-child {
         display: flex;
     }
 
+    /* show action-button here when it is a text */
+    .fileListItem.is-text .actionButton {
+        display: flex;
+    }
+
     .fileListItem {
         grid-template-columns: 1fr auto;
     }
@@ -248,6 +276,10 @@ ul li:last-child {
         display: none;
     }
 
+    .fileListItem.is-text .moreButton {
+        display: none;
+    }
+
     .menuButton {
         display: block; /* Buttons take full width */
         margin: 10px 0; /* Spacing between buttons */
@@ -264,5 +296,15 @@ ul li:last-child {
         height: 1px;
         background-color: var(--border-line); /* Color of separator lines */
         margin: 10px 0; /* Spacing around separator lines */
+    }
+
+    .editor-content {
+        margin: 10% auto; /* Reduce margin on the top for small screens */
+        width: 85%; /* Make the editor wider on small screens */
+        
+    }
+
+    #textEditor {
+        max-height: 200px;
     }
 }

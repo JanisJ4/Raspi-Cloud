@@ -112,7 +112,10 @@ function newUser() {
                     password: password
                 })
             })
-                .then(response => response.json())
+            .then(response => {
+                checkForTokenExpiration(response);
+                return response.json();
+            })
                 .then(data => {
                     if (data.success) {
                         // Reload the user list upon success
@@ -154,7 +157,10 @@ function newGroup() {
                     group_name: group_name
                 })
             })
-                .then(response => response.json())
+            .then(response => {
+                checkForTokenExpiration(response);
+                return response.json();
+            })
                 .then(data => {
                     if (data.success) {
                         // Reload the group list upon success
@@ -193,7 +199,10 @@ function loadAllUsers() {
             'Authorization': `Bearer ${token}`,
         }
     })
-        .then(response => response.json()) // Parse the response as JSON
+    .then(response => {
+        checkForTokenExpiration(response);
+        return response.json();
+    })
         .then(users => {
             // Process each user in the received data
             users.forEach(user => {
@@ -236,7 +245,10 @@ function fetchUserRights(username) {
     // Default rights that should always be displayed
     const standardRights = ['admin', 'owner'];
     return fetch(`${protocol}//${serverIP}:${serverPort}/user_rights/${username}`)
-        .then(response => response.json())
+    .then(response => {
+        checkForTokenExpiration(response);
+        return response.json();
+    })
         .then(userRights => {
             // Create an object to store the status of each right
             const rightsStatus = standardRights.reduce((acc, right) => {
@@ -266,7 +278,10 @@ function fetchGroupUserRights(username) {
             group_id: localStorage.getItem('group_id')
         })
     })
-        .then(response => response.json())
+    .then(response => {
+        checkForTokenExpiration(response);
+        return response.json();
+    })
         .then(userGroupRights => {
             // Create an object to store the status of each group right
             const rightsStatus = groupSpecificRights.reduce((acc, right) => {
@@ -281,7 +296,10 @@ function fetchGroupUserRights(username) {
 // Function to fetch user groups
 function fetchUserGroups(username) {
     return fetch(`${protocol}//${serverIP}:${serverPort}/user_groups/${username}`)
-        .then(response => response.json())
+    .then(response => {
+        checkForTokenExpiration(response);
+        return response.json();
+    })
         .then(data => data.groups);
 }
 
@@ -295,7 +313,10 @@ function fetchGroups() {
             'Authorization': `Bearer ${token}`,
         }
     })
-        .then(response => response.json());
+    .then(response => {
+        checkForTokenExpiration(response);
+        return response.json();
+    });
 }
 
 // Function to change user rights
@@ -315,7 +336,10 @@ function changeUserRights(username, newRights) {
             new_rights: newRights
         })
     })
-        .then(response => response.json())
+    .then(response => {
+        checkForTokenExpiration(response);
+        return response.json();
+    })
         .then(data => {
             if (data.success) {
                 // If the operation was successful, reload user rights to reflect changes
@@ -347,7 +371,10 @@ function changeGroupUserRights(username, group, newRights) {
             new_rights: newRights
         })
     })
-        .then(response => response.json())
+    .then(response => {
+        checkForTokenExpiration(response);
+        return response.json();
+    })
         .then(data => {
             if (data.success) {
                 // If the operation was successful, reload the user menu to reflect changes
@@ -382,7 +409,10 @@ function changeUserGroups(username, newGroups) {
             new_groups: newGroups
         })
     })
-        .then(response => response.json())
+    .then(response => {
+        checkForTokenExpiration(response);
+        return response.json();
+    })
         .then(data => {
             if (data.success) {
                 // If the operation was successful, reload the user menu to reflect changes
@@ -417,7 +447,10 @@ function changeUsername(oldUsername) {
             new_username: newUsername
         })
     })
-        .then(response => response.json())
+    .then(response => {
+        checkForTokenExpiration(response);
+        return response.json();
+    })
         .then(data => {
             if (data.success) {
                 // If the operation was successful, reload either user list or group members based on the view
@@ -455,7 +488,10 @@ function changePassword(username) {
             new_password: newPassword
         })
     })
-        .then(response => response.json())
+    .then(response => {
+        checkForTokenExpiration(response);
+        return response.json();
+    })
         .then(data => {
             alert(data.message); // Display a message whether the operation was successful or not
         })
@@ -609,7 +645,10 @@ function loadGroupMembers(group_name) {
             group_name: group_name
         })
     })
-        .then(response => response.json()) // Parse the response as JSON
+    .then(response => {
+        checkForTokenExpiration(response);
+        return response.json();
+    })
         .then(users => {
             // Process each group member
             users.forEach(user => {
@@ -653,7 +692,10 @@ function loadAllGroups() {
             'Authorization': `Bearer ${token}`,
         }
     })
-        .then(response => response.json()) // Parse the response as JSON
+    .then(response => {
+        checkForTokenExpiration(response);
+        return response.json();
+    })
         .then(groups => {
             // Process each group
             groups.forEach(group => {
