@@ -3,8 +3,20 @@ const protocol = window.location.protocol;
 const serverIP = window.location.hostname;
 const serverPort = '8080';
 
+// Event listener for when the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+    var versionNumber = 'v2.3.1'; 
+    var versionTag = document.createElement('div');
+    versionTag.className = 'version-tag';
+    versionTag.textContent = versionNumber;
+
+    document.body.appendChild(versionTag);
+    // Regular token check, e.g. every 5 minutes
+    setInterval(checkAuthToken, 300000);
+});
+
 // Function to toggle dark mode
-function toggleDarkMode() { 
+function toggleDarkMode() {
     const body = document.body;
     // Toggle the 'light-mode' class on the body element to switch between dark and light mode
     body.classList.toggle('light-mode');
@@ -50,15 +62,53 @@ function getCookie(name) {
     if (parts.length === 2) return parts.pop().split(';').shift();
 }
 
+function logout() {
+    // Handle logout action, such as redirecting to the login page
+    localStorage.setItem('dateipfad', ''); // Clear the file path in local storage
+    var targetURL = "/index.html"; // Define the URL to redirect after logout
+    window.location.href = targetURL; // Redirect to the login page
+}
+
+function isTokenExpired(token) {
+    // Decode the token to extract the expiration date
+    const payloadBase64 = token.split('.')[1];
+    const decodedPayload = JSON.parse(window.atob(payloadBase64));
+    const exp = decodedPayload.exp;
+    const now = Math.floor(Date.now() / 1000); // Current time in seconds since Epoch
+
+    // Check whether the token has expired
+    return exp < now;
+}
+
+function checkForTokenExpiration(response) {
+    if (response.status == 401) {
+        logout();
+    } else if (!response.ok) {
+        // Wenn der Status nicht ok ist, werfen Sie einen Fehler mit dem StatusText
+        throw new Error(`HTTP error! status: ${response.statusText}`);
+    }
+}
+
+function checkAuthToken() {
+    // Get token from the cookie
+    const token = getCookie('token');
+
+    if (token && isTokenExpired(token)) {
+        // Token has expired
+        console.log('Token expired. Log out user.');
+        logout();
+    } else {
+        // Token is valid or not available
+        console.log('Token is valid or not available.');
+    }
+}
+
 // Event listener for logout action
 document.querySelector('.menu a.logout').addEventListener('click', async (e) => {
     e.preventDefault();
 
     try {
-        // Handle logout action, such as redirecting to the login page
-        localStorage.setItem('dateipfad', ''); // Clear the file path in local storage
-        var targetURL = "/index.html"; // Define the URL to redirect after logout
-        window.location.href = targetURL; // Redirect to the login page
+        logout();
     } catch (error) {
         console.error('Error during fetch:', error); // Log any errors to the console
     }

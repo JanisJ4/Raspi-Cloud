@@ -1,3 +1,4 @@
+
 // Function to toggle dark mode
 function toggleDarkMode() {
     const body = document.body;

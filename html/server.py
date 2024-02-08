@@ -1,6 +1,5 @@
-from flask import Flask, request, jsonify, redirect, url_for, send_from_directory, send_file, make_response
+from flask import Flask, request, jsonify, send_file, make_response
 from flask_cors import CORS
-import socket
 import sqlite3
 import os
 from dotenv import load_dotenv
@@ -8,6 +7,8 @@ from werkzeug.utils import secure_filename
 from flask_bcrypt import Bcrypt
 import jwt  # Ensure jwt library is installed, e.g., with "pip install PyJWT"
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
+from jwt.exceptions import ExpiredSignatureError
+from flask_jwt_extended.exceptions import JWTExtendedException
 import json
 import mimetypes 
 from pathlib import Path
@@ -315,6 +316,9 @@ def validate_json(json_data, required_keys):
             return False
     return True
 
+@jwt_manager.expired_token_loader
+def my_expired_token_callback(jwt_header, jwt_payload):
+    return jsonify({'success': False, 'message': 'Token has expired.'}), 401
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -684,27 +688,47 @@ def upload_file():
             # Securely generate a filename and save the file in the designated folder
             filename = secure_filename(file.filename)
             file_path = os.path.join(get_group_upload_folder(group_id, folder), filename)
-            file.save(file_path)
 
-            # Add a record of the file in the database
-            conn = sqlite3.connect(db_files_path)
+            # Check whether the file exists and act accordingly
+            if os.path.exists(file_path):
+                os.remove(file_path) # Remove existing file
+
+            file.save(file_path) # Save new file
+
+            conn = sqlite3.connect(db_files_path) # connect to database
             cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO files (group_id, filename, created_at, last_modified_by, size, folder) 
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (group_id, filename, datetime.now(), user_id, os.path.getsize(file_path), folder))
-            conn.commit()
-            conn.close() 
+
             # Retrieve the user's IP address and the current timestamp
             ip_address = request.remote_addr
-            add_to_log("/upload_file", user_id, ip_address, "true", 'File successfully uploaded.')
+
+            # Check whether an entry exists for the file and update or insert it
+            cursor.execute('''
+                SELECT COUNT(*) FROM files WHERE filename=? AND folder=? AND group_id=?
+            ''', (filename, folder, group_id))
+            if cursor.fetchone()[0] > 0:
+                # Update entry
+                cursor.execute('''
+                    UPDATE files SET last_modified_by=?, size=?, created_at=? WHERE filename=? AND folder=? AND group_id=?
+                ''', (user_id, os.path.getsize(file_path), datetime.now(), filename, folder, group_id))
+                add_to_log("/upload_file", user_id, ip_address, "true", f'{file_path} successfully overwritten.')
+            else:
+                # Insert new entry
+                cursor.execute('''
+                    INSERT INTO files (group_id, filename, created_at, last_modified_by, size, folder) 
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (group_id, filename, datetime.now(), user_id, os.path.getsize(file_path), folder))
+                add_to_log("/upload_file", user_id, ip_address, "true", 'File successfully uploaded.')
+
+            conn.commit()
+            conn.close() 
+            
             return jsonify({'success': True, 'message': 'File successfully uploaded.'})
         else:
             # Return a permission denied error if the user lacks appropriate rights
             return jsonify({'success': False, 'message': 'Permission denied.'})
     except Exception as e:
         # Handle any exceptions during file upload
-        return jsonify({'success': False, 'message': 'A server error has occurred.'})
+        return jsonify({'success': False, 'message': f'A server error has occurred. {e}'})
 
 @app.route('/create_folder', methods=['POST'])
 @jwt_required()  # Ensure the user is authenticated via JWT
@@ -1223,8 +1247,6 @@ def change_username():
         # Handle any exceptions during file upload
         return jsonify({'success': False, 'message': 'A server error has occurred.'})
 
-
-
 @app.route('/change_user_rights', methods=['POST'])
 @jwt_required()
 def change_user_rights():
@@ -1389,14 +1411,11 @@ def change_user_groups():
             return jsonify({'success': False, 'message': 'Invalid or missing data'})
 
         username = data.get('username')  # The username of the user whose groups are being changed
-        new_group_name = data.get('new_groups')  # A list of group_ids to assign to the user
+        new_groups = data.get('new_groups')  # A list of group_ids to assign to the user
 
         # Validate the username input
         if not validate_name(username, 3, 25):
             return jsonify({'success': False, 'message': 'Invalid username. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
-        
-        if not validate_name(new_group_name, 3, 25):        
-            return jsonify({'success': False, 'message': 'Invalid group name. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
 
         user_id = get_user_id(username)  # Get the user_id associated with the given username
         if user_id:
@@ -1407,9 +1426,12 @@ def change_user_groups():
                 # then add the new groups
 
                 # Prepare the new groups (remove duplicates)
-                unique_new_groups = set(new_group_name)
+                unique_new_groups = set(new_groups)
 
                 for group_id in unique_new_groups:
+                    if not validate_id(group_id):      
+                        conn.close()  
+                        return jsonify({'success': False, 'message': 'Invalid group name. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
                     conn.execute('INSERT INTO group_members (user_id, group_id) VALUES (?, ?)', (user_id, group_id))
                 conn.commit()
                 conn.close()
@@ -1421,7 +1443,7 @@ def change_user_groups():
             return jsonify({'success': False, 'message': 'No User'})
     except Exception as e:
         # Handle any exceptions during file upload
-        return jsonify({'success': False, 'message': 'A server error has occurred.'})
+        return jsonify({'success': False, 'message': f'A server error has occurred. {e}'})
 
 if __name__ == '__main__':
     # Laden der Konfigurationsvariablen aus der config.env Datei

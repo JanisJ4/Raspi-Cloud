@@ -253,7 +253,21 @@ button {
     background-color: var(--background-color);
     border: 1px solid var(--border-line);
     text-decoration: none;
+    z-index: 1;
 }
+
+.version-tag {
+    position: fixed;
+    right: 0px;
+    bottom: 0px;
+    background-color: rgba(0, 0, 0, 0.3);
+    color: #ffffff;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 9px;
+    z-index: 0; /* Stellt sicher, dass der Tag über anderen Elementen schwebt */
+}
+
 
 @media only screen and (max-width: 768px) {
     .modal-content {
