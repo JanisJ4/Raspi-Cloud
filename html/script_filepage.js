@@ -159,7 +159,15 @@ function closeMiniMenu() {
     var menu = document.getElementById('moreMenu');
     var overlay = document.getElementById("overlay");
 
-    menu.style.bottom = '-10%';
+    // CSS breakpoint for mobile devices
+    var mobileBreakpoint = 768;
+    if (window.innerWidth > mobileBreakpoint) {
+        moreMenu.style.display = 'none';
+    } else {
+        setTimeout(function () {
+            menu.style.bottom = '-100%';
+        }, 100); // Duration of the transition in milliseconds
+    }
 
     setTimeout(function () {
         menu.style.display = 'none';
@@ -211,7 +219,7 @@ function updateDirectoryButtons() {
                 goHome();
             });
             linkContainer.appendChild(homelink);
-            break;
+            continue;
         }
 
         const link = document.createElement("a");
@@ -220,7 +228,7 @@ function updateDirectoryButtons() {
         link.style.fontSize = 'var(--normal-text-size)';
         link.addEventListener("click", () => {
             // Update the path when a button is clicked
-            const newPath = directories.slice(0, i + 1).join("/");
+            const newPath = directories.slice(0, i).join("/");
             goToDirectory(newPath);
         });
         linkContainer.appendChild(link);
@@ -698,7 +706,6 @@ async function saveEditedFile(filename, editedContent) {
 
         // Check the response data for success or failure
         if (data.success) {
-            alert('File saved successfully.');
             loadGroupFiles(); // Reload the group files to reflect the uploaded file
             closeModal('textEditorModal'); // Close the editor modal
         } else {
@@ -735,6 +742,11 @@ async function handleFileUpload() {
     formData.append('file', file); // Append the file to the FormData object
     formData.append('json', jsonBody); // Append the JSON data as a string
 
+    closeMiniMenu();
+    const fileList = document.getElementById('fileList'); // Get the element to display files and folders
+    // show uploadIndicator
+    fileList.innerHTML += '<li class="fileListHeader"><div class="fileInfo">Upload file...</div><div class="fileInfo">...</div><div class="fileInfo">...</div><div class="fileInfo">...</div><div class="fileButton"></div> <!-- Empty divs as placeholders for buttons --><div class="fileButton"></div></li>';
+
     try {
         // Send a POST request to the server to upload the file
         const response = await fetch(url, {
@@ -759,8 +771,7 @@ async function handleFileUpload() {
         }
     } catch (error) {
         console.error('Error during fetch:', error); // Log any errors to the console
-    }
-
+    } 
     // Optionally reset the file input field to allow re-selection of the same file
     fileInput.value = null;
 }

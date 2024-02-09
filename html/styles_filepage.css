@@ -6,9 +6,9 @@
     background-color: var(--background-color);
     border: 1px solid var(--border-line);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s;
     padding: 10px;
     z-index: 3;
-    transition: bottom 0.3s ease; /* Added for transition effect */
 }
 
 /* Style for buttons within the 'moreButton' class */

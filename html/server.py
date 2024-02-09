@@ -13,7 +13,7 @@ import json
 import mimetypes 
 from pathlib import Path
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import shutil
 
 # Initialize the Flask app and other extensions
@@ -22,6 +22,7 @@ jwt_manager = JWTManager(app)
 bcrypt = Bcrypt(app)
 # Generate a random secret key for JWT
 app.config['SECRET_KEY'] = os.urandom(24).hex()  
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=45)
 
 # Enable Cross-Origin Resource Sharing (CORS)
 CORS(app, resources={r"/*": {"origins": "*"}})
