@@ -332,11 +332,9 @@ def login():
         # Retrieve the user's IP address and the current timestamp
         ip_address = request.remote_addr
         add_to_log("/login", username, ip_address, "true", '')
-        # Log the login attempt
-        # log_login_attempt(timestamp, username, ip_address, "Success", "")
 
         # Validate the username input
-        if not re.match(r"^[A-Za-z0-9]+$", username):
+        if not validate_name(username,3,25):
             return jsonify({'success': False, 'message': 'Invalid username'})
 
         # Connect to the SQLite database
@@ -363,7 +361,7 @@ def login():
                 owner_right_id = cursor.fetchone()[0]
                 cursor.execute('INSERT INTO user_rights (user_id, right_id) VALUES (?, ?)', (user_id, owner_right_id))
 
-                # Check and create the "First Group" if it doesn't exist
+                # Check and create the "Your Group" if it doesn't exist
                 cursor.execute('SELECT group_id FROM groups WHERE group_name = "Your group"')
                 group = cursor.fetchone()
                 if group is None:
@@ -372,7 +370,7 @@ def login():
                 else:
                     group_id = group[0]
 
-                # Add the user to the "First Group"
+                # Add the user to the "Your Group"
                 cursor.execute('INSERT INTO group_members (user_id, group_id) VALUES (?, ?)', (user_id, group_id))
 
                 conn.commit()
@@ -457,7 +455,7 @@ def create_user():
             return jsonify({'success': False, 'message': 'Permission denied.'})
 
         # Validate the username input
-        if not validate_name(username, 3, 25):
+        if not validate_name(username, 3, 0):
             return jsonify({'success': False, 'message': 'Invalid username. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
 
         # At least 8 characters, at least one letter and one number
@@ -493,6 +491,70 @@ def create_user():
         # Handle any exceptions
         add_to_log("/create_user", username, ip_address, "false", 'Error during login:' + str(e))
         return jsonify({'success': False, 'message': 'A server error has occurred.'}), 500
+
+@app.route('/delete_user', methods=['POST'])
+@jwt_required()
+def delete_user():
+    try:
+        admin_user_id = get_jwt_identity()  # Get the user ID of the admin
+        if admin_user_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+
+        if not check_user_is_admin(admin_user_id):
+            return jsonify({'success': False, 'message': 'Permission denied.'})
+
+        data = request.get_json()
+        required_keys = ['username'] 
+        if not validate_json(data, required_keys):
+            return jsonify({'success': False, 'message': 'Invalid or missing data'})
+        
+        # Retrieve the user's name
+        username = data.get('username')
+
+        if not validate_name(username,3,25):
+            return jsonify({'success': False, 'message': 'Invalid username. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
+
+        user_id = get_user_id(username)
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if the user exists
+        cursor.execute('SELECT 1 FROM users WHERE user_id = ?', (user_id,))
+        if cursor.fetchone() is None:
+            conn.close()
+            return jsonify({'success': False, 'message': 'User not found.'})
+        
+
+        # only owner can delete owner, and only when he is not the last owner
+        if check_user_role(user_id, 'owner'):
+
+            if not check_user_role(admin_user_id, 'owner'):
+                conn.close()
+                return jsonify({'success': False, 'message': 'Permission denied.'})
+                    
+            # Check the number of current owners in the database
+            cursor.execute('SELECT COUNT(*) FROM user_rights JOIN rights ON user_rights.right_id = rights.right_id WHERE right_name = "owner"')
+            owner_count = cursor.fetchone()[0]
+
+            if owner_count <= 1:
+                conn.close()
+                return jsonify({'success': False, 'message': 'Can not delete the only owner.'})
+
+        # Delete the user
+        cursor.execute('DELETE FROM users WHERE user_id = ?', (user_id,))
+        cursor.execute('DELETE FROM group_members WHERE user_id = ?', (user_id,))
+        cursor.execute('DELETE FROM user_rights WHERE user_id = ?', (user_id,))
+        conn.commit()
+        conn.close()
+        # Retrieve the user's IP address
+        ip_address = request.remote_addr
+        add_to_log("/delete_user", admin_user_id, ip_address, "true", 'User deleted successfully.')
+        return jsonify({'success': True, 'message': 'User deleted successfully.'})
+
+    except Exception as e:
+        # Handle any exceptions during file upload
+        return jsonify({'success': False, 'message': f'A server error has occurred.{e}'})
 
 @app.route('/create_group', methods=['POST'])
 @jwt_required()  # Require a valid JWT to access this route
@@ -567,7 +629,7 @@ def delete_group():
     try:
         admin_user_id = get_jwt_identity()  # Get the user ID of the admin
         if admin_user_id is None:
-                return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
 
         if not check_user_is_admin(admin_user_id):
             return jsonify({'success': False, 'message': 'Permission denied.'})
@@ -576,35 +638,52 @@ def delete_group():
         required_keys = ['group_id'] 
         if not validate_json(data, required_keys):
             return jsonify({'success': False, 'message': 'Invalid or missing data'})
-        
+
         group_id = data.get('group_id')
 
-        if not validate_id(group_id):
+        # Check user permissions
+        if not (check_user_role(admin_user_id, 'local_admin', group_id) or
+            check_user_is_admin(admin_user_id)):
+            return jsonify({'success': False, 'message': 'Permission denied.'})
+
+        if not validate_id(str(group_id)):
             return jsonify({'success': False, 'message': 'Invalid group ID. The id must only consist of numbers.'})
 
-        try:
-            conn = get_db_connection()
-            cursor = conn.cursor()
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-            # Check if the group exists
-            cursor.execute('SELECT 1 FROM groups WHERE group_id = ?', (group_id,))
-            if cursor.fetchone() is None:
-                conn.close()
-                return jsonify({'success': False, 'message': 'Group not found.'})
-
-            # Delete the group
-            cursor.execute('DELETE FROM groups WHERE group_id = ?', (group_id,))
-            conn.commit()
+        # Check if the group exists
+        cursor.execute('SELECT 1 FROM groups WHERE group_id = ?', (group_id,))
+        if cursor.fetchone() is None:
             conn.close()
-            # Retrieve the user's IP address and the current timestamp
-            ip_address = request.remote_addr
-            add_to_log("/delete_group", admin_user_id, ip_address, "true", 'Group deleted successfully.')
-            return jsonify({'success': True, 'message': 'Group deleted successfully.'})
-        except Exception as e:
-            return jsonify({'success': False, 'message': 'A server error has occurred.'}), 500
+            return jsonify({'success': False, 'message': 'Group not found.'})
+
+        # Delete the group
+        cursor.execute('DELETE FROM groups WHERE group_id = ?', (group_id,))
+        conn.commit()
+        conn.close()
+
+        ############################################################
+        # Delete all files and folders of the group
+        conn = sqlite3.connect(db_files_path)
+        cursor = conn.cursor()
+
+        # Build the full group path
+        group_path = get_group_upload_folder(group_id, "")
+
+        shutil.rmtree(group_path)
+
+        cursor.execute('DELETE FROM files WHERE group_id = ?', (group_id,))
+
+        conn.commit()
+        conn.close()
+
+        # Retrieve the user's IP address and the current timestamp
+        ip_address = request.remote_addr
+        add_to_log("/delete_group", admin_user_id, ip_address, "true", 'Group deleted successfully.')
+        return jsonify({'success': True, 'message': 'Group deleted successfully.'})
     except Exception as e:
-        # Handle any exceptions during file upload
-        return jsonify({'success': False, 'message': 'A server error has occurred.'})
+        return jsonify({'success': False, 'message': 'A server error has occurred.'}), 500
 
 @app.route('/rename_group', methods=['POST'])
 @jwt_required()
@@ -619,7 +698,7 @@ def rename_group():
             return jsonify({'success': False, 'message': 'Permission denied.'})
 
         data = request.get_json()
-        required_keys = ['group_id', 'nwe_group_name'] 
+        required_keys = ['group_id', 'new_group_name'] 
         if not validate_json(data, required_keys):
             return jsonify({'success': False, 'message': 'Invalid or missing data'})
         group_id = data.get('group_id')
@@ -628,11 +707,16 @@ def rename_group():
         if group_id is None or new_group_name is None:
             return jsonify({'success': False, 'message': 'Group ID and new group name are required.'})
 
-        if not validate_id(group_id):
+        if not validate_id(str(group_id)):
             return jsonify({'success': False, 'message': 'Invalid group ID. The id must only consist of numbers.'})
 
         if not validate_name(new_group_name, 3, 25):        
             return jsonify({'success': False, 'message': 'Invalid group name. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
+        
+        # Check user permissions
+        if not (check_user_role(admin_user_id, 'local_admin', group_id) or
+            check_user_is_admin(admin_user_id)):
+            return jsonify({'success': False, 'message': 'Permission denied.'})
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -650,7 +734,7 @@ def rename_group():
 
         return jsonify({'success': True, 'message': 'Group renamed successfully.'})
     except Exception as e:
-        return jsonify({'success': False, 'message': 'A server error has occurred.'}), 500
+        return jsonify({'success': False, 'message': f'A server error has occurred.{e}'}), 500
 
 @app.route('/upload_file', methods=['POST'])
 @jwt_required()  # Ensure the user is authenticated via JWT
@@ -729,7 +813,7 @@ def upload_file():
             return jsonify({'success': False, 'message': 'Permission denied.'})
     except Exception as e:
         # Handle any exceptions during file upload
-        return jsonify({'success': False, 'message': f'A server error has occurred. {e}'})
+        return jsonify({'success': False, 'message': 'A server error has occurred.'})
 
 @app.route('/create_folder', methods=['POST'])
 @jwt_required()  # Ensure the user is authenticated via JWT
@@ -1365,11 +1449,11 @@ def change_group_rights():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Prüfen, ob "owner" Rechte entfernt werden
+        # Prove if the changed rights ara owner rights
         removing_owner = 'owner' in new_rights and check_user_role(user_id, 'owner')
         
         if removing_owner:
-            # Anzahl der aktuellen Besitzer in der Datenbank überprüfen
+            # Prove if the user is the last owner
             cursor.execute('SELECT COUNT(*) FROM user_rights JOIN rights ON user_rights.right_id = rights.right_id WHERE right_name = "owner"')
             owner_count = cursor.fetchone()[0]
 
@@ -1444,7 +1528,7 @@ def change_user_groups():
             return jsonify({'success': False, 'message': 'No User'})
     except Exception as e:
         # Handle any exceptions during file upload
-        return jsonify({'success': False, 'message': f'A server error has occurred. {e}'})
+        return jsonify({'success': False, 'message': 'A server error has occurred.'})
 
 if __name__ == '__main__':
     # Laden der Konfigurationsvariablen aus der config.env Datei

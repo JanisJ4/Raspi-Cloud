@@ -66,6 +66,36 @@ button.add {
     text-align: center;
 }
 
+/* Delete Button Styles */
+.deleteButton {
+    background-color: red;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    float: right;
+    width: 30px; 
+    height: 30px;
+    margin-right: 10px;
+    margin-top: -5px;
+    padding: 5px;
+}
+
+.renameButton {
+    align-items: center;
+    justify-content: center;
+    color: white;
+    float: right;
+    width: 30px; 
+    height: 30px;
+    margin-right: 10px;
+    margin-top: -5px;
+    padding: 5px;
+}
+
+#deleteUser {
+    background-color: red;
+}
+
 /* Media Query for Smaller Screens */
 @media only screen and (max-width: 768px) {
     .user-menu, .group-menu {
