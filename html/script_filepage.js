@@ -533,6 +533,13 @@ async function openFolder(folder) {
 
 // Function to delete a file
 async function deleteFile(filename) {
+    // Confirm the file deletion
+    const confirmDeletion = confirm(`Are you sure you want to delete the file: ${filename}?`);
+
+    if (!confirmDeletion) {
+        return;
+    }
+
     // Retrieve the authentication token
     const token = getCookie('token');
     const folder = localStorage.getItem('filepath');

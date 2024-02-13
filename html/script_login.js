@@ -43,7 +43,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             document.cookie = "token=" + encodeURIComponent(userToken) + "; path=/";
             window.location.href = targetURL;
         } else {
-            alert('Incorrect user name or password.'); // Alert if login credentials are incorrect
+            alert(data.message); // Alert if login credentials are incorrect
         }
     } catch (error) {
         console.error('Error during fetch:', error); // Log fetch errors

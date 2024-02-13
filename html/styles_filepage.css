@@ -135,8 +135,8 @@ ul li:last-child {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    width: 30px; /* Set the desired button width here */
-    height: 30px; /* Set button height to match width */
+    width: 30px; 
+    height: 30px;
 }
 
 .deleteButton {

@@ -1,5 +1,5 @@
 // Wait for the DOM to be fully loaded before executing the code
-document.addEventListener('DOMContentLoaded', () => { 
+document.addEventListener('DOMContentLoaded', () => {
     // Load all users and groups when the page is loaded
     loadAllUsers();
     loadAllGroups();
@@ -78,7 +78,7 @@ function goBack() {
 
     var back = document.getElementById('back-button');
     var toggle = document.getElementById('view-toggle');
-    
+
     back.style.display = 'none'; // Hide back button
     toggle.style.display = 'block'; // Show view toggle button
 
@@ -112,10 +112,10 @@ function newUser() {
                     password: password
                 })
             })
-            .then(response => {
-                checkForTokenExpiration(response);
-                return response.json();
-            })
+                .then(response => {
+                    checkForTokenExpiration(response);
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         // Reload the user list upon success
@@ -157,10 +157,10 @@ function newGroup() {
                     group_name: group_name
                 })
             })
-            .then(response => {
-                checkForTokenExpiration(response);
-                return response.json();
-            })
+                .then(response => {
+                    checkForTokenExpiration(response);
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         // Reload the group list upon success
@@ -199,10 +199,10 @@ function loadAllUsers() {
             'Authorization': `Bearer ${token}`,
         }
     })
-    .then(response => {
-        checkForTokenExpiration(response);
-        return response.json();
-    })
+        .then(response => {
+            checkForTokenExpiration(response);
+            return response.json();
+        })
         .then(users => {
             // Process each user in the received data
             users.forEach(user => {
@@ -245,10 +245,10 @@ function fetchUserRights(username) {
     // Default rights that should always be displayed
     const standardRights = ['admin', 'owner'];
     return fetch(`${protocol}//${serverIP}:${serverPort}/user_rights/${username}`)
-    .then(response => {
-        checkForTokenExpiration(response);
-        return response.json();
-    })
+        .then(response => {
+            checkForTokenExpiration(response);
+            return response.json();
+        })
         .then(userRights => {
             // Create an object to store the status of each right
             const rightsStatus = standardRights.reduce((acc, right) => {
@@ -278,10 +278,10 @@ function fetchGroupUserRights(username) {
             group_id: localStorage.getItem('group_id')
         })
     })
-    .then(response => {
-        checkForTokenExpiration(response);
-        return response.json();
-    })
+        .then(response => {
+            checkForTokenExpiration(response);
+            return response.json();
+        })
         .then(userGroupRights => {
             // Create an object to store the status of each group right
             const rightsStatus = groupSpecificRights.reduce((acc, right) => {
@@ -296,10 +296,10 @@ function fetchGroupUserRights(username) {
 // Function to fetch user groups
 function fetchUserGroups(username) {
     return fetch(`${protocol}//${serverIP}:${serverPort}/user_groups/${username}`)
-    .then(response => {
-        checkForTokenExpiration(response);
-        return response.json();
-    })
+        .then(response => {
+            checkForTokenExpiration(response);
+            return response.json();
+        })
         .then(data => data.groups);
 }
 
@@ -313,10 +313,10 @@ function fetchGroups() {
             'Authorization': `Bearer ${token}`,
         }
     })
-    .then(response => {
-        checkForTokenExpiration(response);
-        return response.json();
-    });
+        .then(response => {
+            checkForTokenExpiration(response);
+            return response.json();
+        });
 }
 
 // Function to change user rights
@@ -336,10 +336,10 @@ function changeUserRights(username, newRights) {
             new_rights: newRights
         })
     })
-    .then(response => {
-        checkForTokenExpiration(response);
-        return response.json();
-    })
+        .then(response => {
+            checkForTokenExpiration(response);
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 // If the operation was successful, reload user rights to reflect changes
@@ -371,10 +371,10 @@ function changeGroupUserRights(username, group, newRights) {
             new_rights: newRights
         })
     })
-    .then(response => {
-        checkForTokenExpiration(response);
-        return response.json();
-    })
+        .then(response => {
+            checkForTokenExpiration(response);
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 // If the operation was successful, reload the user menu to reflect changes
@@ -409,10 +409,10 @@ function changeUserGroups(username, newGroups) {
             new_groups: newGroups
         })
     })
-    .then(response => {
-        checkForTokenExpiration(response);
-        return response.json();
-    })
+        .then(response => {
+            checkForTokenExpiration(response);
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 // If the operation was successful, reload the user menu to reflect changes
@@ -447,10 +447,10 @@ function changeUsername(oldUsername) {
             new_username: newUsername
         })
     })
-    .then(response => {
-        checkForTokenExpiration(response);
-        return response.json();
-    })
+        .then(response => {
+            checkForTokenExpiration(response);
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 // If the operation was successful, reload either user list or group members based on the view
@@ -488,10 +488,10 @@ function changePassword(username) {
             new_password: newPassword
         })
     })
-    .then(response => {
-        checkForTokenExpiration(response);
-        return response.json();
-    })
+        .then(response => {
+            checkForTokenExpiration(response);
+            return response.json();
+        })
         .then(data => {
             alert(data.message); // Display a message whether the operation was successful or not
         })
@@ -500,6 +500,107 @@ function changePassword(username) {
         });
 }
 
+// Function to delete a user
+function deleteUser(username) {
+    // Get the user's authentication token from a cookie
+    const token = getCookie('token');
+
+    // Confirm the user deletion
+    const confirmDeletion = confirm(`Are you sure you want to delete the user: ${username}?`);
+
+    if (!confirmDeletion) {
+        return;
+    }
+
+    // Send a POST request to the server to delete the user
+    fetch(`${protocol}//${serverIP}:${serverPort}/delete_user`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            username: username
+        })
+    })
+        .then(response => {
+            checkForTokenExpiration(response);
+            return response.json();
+        })
+        .then(data => {
+            alert(data.message); // Display a message whether the operation was successful or not
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
+
+// Function to delete a group
+function deleteGroup(group_id, group_name) {
+    // Get the user's authentication token from a cookie
+    const token = getCookie('token');
+
+    // Confirm the group deletion
+    const confirmDeletion = confirm(`Are you sure you want to delete the group: ${group_name}?`);
+
+    if (!confirmDeletion) {
+        return;
+    }
+
+    // Send a POST request to the server to delete the group
+    fetch(`${protocol}//${serverIP}:${serverPort}/delete_group`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            group_id: group_id
+        })
+    })
+        .then(response => {
+            checkForTokenExpiration(response);
+            return response.json();
+        })
+        .then(data => {
+            alert(data.message); // Display a message whether the operation was successful or not
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
+
+async function renameGroup(groupId, newGroupName) {
+    // Get the user's authentication token from a cookie
+    const token = getCookie('token');
+
+    const data = {
+        group_id: groupId,
+        new_group_name: newGroupName
+    };
+
+    await fetch(`${protocol}//${serverIP}:${serverPort}/rename_group`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        checkForTokenExpiration(response);
+        return response.json();
+    })
+    .then(data => {
+        alert(data.message); // Display a message whether the operation was successful or not
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+
+
+    return response.json();
+}
 
 // Function to create a user menu for a given user
 function createUserMenu(user) {
@@ -516,6 +617,7 @@ function createUserMenu(user) {
         <div class="menu-section properties">
             <button id="changePassword">Change password</button>
             <button id="changeName">Change name</button>
+            <button id="deleteUser">Delete user</button>
         </div>
     `;
 
@@ -616,6 +718,9 @@ function createUserMenu(user) {
     const changePasswordButton = userMenu.querySelector('#changePassword');
     changePasswordButton.addEventListener('click', () => changePassword(user.username));
 
+    const deleteButton = userMenu.querySelector('#deleteUser');
+    deleteButton.addEventListener('click', () => deleteUser(user.username));
+
     // Return the created user menu
     return userMenu;
 }
@@ -645,10 +750,10 @@ function loadGroupMembers(group_name) {
             group_name: group_name
         })
     })
-    .then(response => {
-        checkForTokenExpiration(response);
-        return response.json();
-    })
+        .then(response => {
+            checkForTokenExpiration(response);
+            return response.json();
+        })
         .then(users => {
             // Process each group member
             users.forEach(user => {
@@ -692,16 +797,39 @@ function loadAllGroups() {
             'Authorization': `Bearer ${token}`,
         }
     })
-    .then(response => {
-        checkForTokenExpiration(response);
-        return response.json();
-    })
+        .then(response => {
+            checkForTokenExpiration(response);
+            return response.json();
+        })
         .then(groups => {
             // Process each group
             groups.forEach(group => {
                 const groupDiv = document.createElement('div');
                 groupDiv.className = 'group';
                 groupDiv.textContent = group.group_name;
+
+
+                // Inside the loop where you create the group divs
+                const deleteButton = document.createElement('button');
+                deleteButton.innerHTML = '<i class="fa fa-trash"></i>'; // Use Font Awesome icon
+                deleteButton.classList.add('deleteButton');
+                deleteButton.addEventListener('click', function () {
+                    event.stopPropagation(); // This will stop the event from bubbling up
+                    deleteGroup(group.group_id,group.group_name);
+                });
+                groupDiv.appendChild(deleteButton);
+
+                const renameButton = document.createElement('button');
+                renameButton.innerHTML = '<i class="fa fa-edit"></i>'; // Use Font Awesome icon
+                renameButton.classList.add('renameButton');
+                renameButton.addEventListener('click', function () {
+                    event.stopPropagation(); // This will stop the event from bubbling up
+                    const newGroupName = prompt("Enter a new group name:"); // Prompt user for new group name
+                    if (newGroupName) { // Check if user entered a new group name
+                        renameGroup(group.group_id, newGroupName); // Call renameGroup function with new group name
+                    }
+                });
+                groupDiv.appendChild(renameButton);
 
                 groupDiv.addEventListener('click', function () {
                     // Check if the menu is already loaded
@@ -743,12 +871,12 @@ function loadAllGroups() {
 function toggleUserMenu(userDiv, user) {
     const userMenu = userDiv.querySelector('.user-menu');
     const isVisible = userMenu.style.display === 'grid';
-    
+
     // Hide all open menus
     document.querySelectorAll('.user .user-menu').forEach(menu => {
         menu.style.display = 'none';
     });
-    
+
     // Show the menu of the clicked user if it was not visible previously
     userMenu.style.display = isVisible ? 'none' : 'grid';
 }
