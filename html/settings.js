@@ -242,9 +242,21 @@ function loadAllUsers() {
 
 // Function to fetch and process user rights
 function fetchUserRights(username) {
+    // Retrieve the authentication token
+    const token = getCookie('token');
+
     // Default rights that should always be displayed
     const standardRights = ['admin', 'owner'];
-    return fetch(`${protocol}//${serverIP}:${serverPort}/user_rights/${username}`)
+    return fetch(`${protocol}//${serverIP}:${serverPort}/user_rights`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            username: username
+        })
+    })
         .then(response => {
             checkForTokenExpiration(response);
             return response.json();
@@ -272,6 +284,7 @@ function fetchGroupUserRights(username) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getCookie('token')}` // Ensure the correct way to retrieve the token
         },
         body: JSON.stringify({
             username: username,
@@ -295,7 +308,17 @@ function fetchGroupUserRights(username) {
 
 // Function to fetch user groups
 function fetchUserGroups(username) {
-    return fetch(`${protocol}//${serverIP}:${serverPort}/user_groups/${username}`)
+    const token = getCookie('token');
+    return fetch(`${protocol}//${serverIP}:${serverPort}/user_groups`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+            username: username
+        })
+    })
         .then(response => {
             checkForTokenExpiration(response);
             return response.json();

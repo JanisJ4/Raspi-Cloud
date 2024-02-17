@@ -1012,9 +1012,6 @@ def download_file():
         filename = data.get('filename')  # The name of the file to be downloaded
         group_id = data.get('group')  # The ID of the group that owns the file
 
-        if user_id is None:
-            return jsonify({'success': False, 'message': 'Invalid token.'})
-
         if not validate_id(group_id):
             return jsonify({'success': False, 'message': 'Invalid group ID. The id must only consist of numbers.'})
 
@@ -1064,14 +1061,44 @@ def get_users():
 @app.route('/groups', methods=['GET'])
 @jwt_required()
 def get_groups():
-    conn = get_db_connection()
+    try:
+        user_id = get_jwt_identity()
+        if user_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+        
+        # Establish a database connection
+        conn = get_db_connection()
+
+        if check_user_is_admin(user_id):
+             # Retrieve all group records from the database
+            groups = conn.execute('SELECT * FROM groups').fetchall()
+            conn.close()
     
-    # Retrieve all group records from the database
-    groups = conn.execute('SELECT * FROM groups').fetchall()
-    conn.close()
-    
-    # Convert the group records to a JSON response
-    return jsonify([dict(group) for group in groups])
+            # Convert the group records to a JSON response
+            return jsonify([dict(group) for group in groups])
+        
+        cursor = conn.cursor()
+
+        # SQL query to obtain group IDs and names for all groups the user belongs to
+        query = '''
+        SELECT DISTINCT g.group_id, g.group_name
+        FROM groups g
+        JOIN group_members gm ON g.group_id = gm.group_id
+        WHERE gm.user_id = ?
+        '''
+        cursor.execute(query, (user_id,))
+        groups = cursor.fetchall()
+
+        # Convert the query result into a user-friendly JSON format
+        groups_list = [{'group_id': group[0], 'group_name': group[1]} for group in groups]
+        conn.close()
+
+        # Return a JSON response with the user's groups
+        return jsonify({'success': True, 'groups': groups_list})
+    except Exception as e:
+        # Handle any exceptions during file upload
+        return jsonify({'success': False, 'message': 'A server error has occurred.'})
+
 
 @app.route('/my_groups', methods=['GET'])
 @jwt_required()
@@ -1105,9 +1132,23 @@ def get_my_groups():
         # Handle any exceptions during file upload
         return jsonify({'success': False, 'message': 'A server error has occurred.'})
 
-@app.route('/user_groups/<username>', methods=['GET'])
-def get_user_groups(username):
+@app.route('/user_groups', methods=['POST'])
+@jwt_required()
+def get_user_groups():
     try:
+        requesting_user_id = get_jwt_identity()  # Get the user's identity from the JWT
+        if requesting_user_id is None:
+            return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+        
+        data = request.json
+        required_keys = ['username'] 
+        if not validate_json(data, required_keys):
+            return jsonify({'success': False, 'message': 'Invalid or missing data'})
+
+        username = data.get('username')  # The username of the user whose groups are to be retrieved
+
+        if not validate_name(username, 3, 25):
+            return jsonify({'success': False, 'message': 'Invalid username.'})
         # Establish a database connection
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -1139,19 +1180,30 @@ def get_user_groups(username):
         # Return a JSON response with the user's groups
         return jsonify({'success': True, 'groups': groups_list})
     except Exception as e:
-        print('Error retrieving user groups:', str(e))
-        return jsonify({'success': False, 'message': 'Internal Server Error'}), 500
+        return jsonify({'success': False, 'message': f'Internal Server Error{e}'}), 500
 
 
 
 @app.route('/group_members', methods=['POST'])
+@jwt_required()
 def get_group_members():
+    user_id = get_jwt_identity()  # Get the user's identity from the JWT
+    if user_id is None:
+        return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+    
     data = request.json
     required_keys = ['group_name'] 
     if not validate_json(data, required_keys):
         return jsonify({'success': False, 'message': 'Invalid or missing data'})
     
     group_name = data.get('group_name')
+
+    if not validate_name(group_name, 3, 25):
+        return jsonify({'success': False, 'message': 'Invalid group name.'})
+
+    if (not check_user_is_admin(user_id)) and (not check_user_role(user_id, 'local_admin', group_name)) and (not check_user_role(user_id, 'read', group_name)):
+        return jsonify({'success': False, 'message': 'Permission denied.'})
+
     conn = get_db_connection()
 
     # Update the SQL query to join the 'groups' table
@@ -1169,11 +1221,26 @@ def get_group_members():
     return jsonify([dict(member) for member in members])
 
 
-@app.route('/user_rights/<username>', methods=['GET'])
-def get_user_rights(username):
+@app.route('/user_rights', methods=['POST'])
+@jwt_required()
+def get_user_rights():
+    user_id = get_jwt_identity()  # Get the user's identity from the JWT
+    if user_id is None:
+        return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+    
+    # Extract the username from the JSON data in the request body
+    data = request.json
+    required_keys = ['username']
+    if not validate_json(data, required_keys):
+        return jsonify({'success': False, 'message': 'Invalid or missing data'})
+    
+    username = data.get('username')
 
     if not validate_name(str(username), 3, 25):
         return jsonify({'success': False, 'message': 'Invalid username.'})
+
+    if not check_user_is_admin(user_id):
+        return jsonify({'success': False, 'message': 'Permission denied.'})
     
     conn = get_db_connection()
     
@@ -1193,7 +1260,12 @@ def get_user_rights(username):
     return jsonify([{'username': row['username'], 'right': row['right_name']} for row in user_rights])
 
 @app.route('/user_group_rights', methods=['POST'])
+@jwt_required()
 def get_user_group_rights():
+    user_id = get_jwt_identity()  # Get the user's identity from the JWT
+    if user_id is None:
+        return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
+    
     # Extract user name and group ID from the JSON data in the request body
     data = request.json
     required_keys = ['username', 'group_id'] 
@@ -1248,7 +1320,7 @@ def change_password():
         new_password = data.get('new_password')
         user_id = get_user_id(username)  # Get the user_id associated with the provided username
 
-    # Validate the username input
+        # Validate the username input
         if not validate_name(username, 3, 25):
             return jsonify({'success': False, 'message': 'Invalid username. Only alphanumeric characters and a length of 3-25 characters are permitted.'})
 
