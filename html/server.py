@@ -406,7 +406,7 @@ def get_log():
         if user_id is None:
             return jsonify({'success': False, 'message': 'Permission denied. Lack of authentication.'})
         
-        if not check_user_is_admin(user_id):
+        if not check_user_role(user_id, 'owner'):
             return jsonify({'success': False, 'message': 'Permission denied.'})
 
         if not os.path.isfile(logs_path):
@@ -1330,7 +1330,7 @@ def change_password():
         
         if user_id:
             # Check if the user requesting the password change is an admin or the same user
-            if(check_user_is_admin(user_id) or changing_user_id == user_id):
+            if(check_user_is_admin(changing_user_id) or changing_user_id == user_id):
                 if not new_password:
                     return jsonify({'success': False, 'message': 'New password is missing.'})
 

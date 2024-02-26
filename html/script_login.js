@@ -39,9 +39,11 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             // On successful login, hide the login form
             var userToken = data.token; // Retrieve the token from the response
             var targetURL = "/filepage.html"; // Define the URL to redirect after login
-            // Store the token in a cookie and redirect to the target URL
+            // Store the token and username in a cookie and redirect to the target URL
             document.cookie = "token=" + encodeURIComponent(userToken) + "; path=/";
+            document.cookie = "username=" + encodeURIComponent(username) + "; path=/";
             window.location.href = targetURL;
+
         } else {
             alert(data.message); // Alert if login credentials are incorrect
         }

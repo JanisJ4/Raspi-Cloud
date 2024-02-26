@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.close').forEach(closeButton => {
         closeButton.addEventListener('click', closeModal);
     });
+
+    // Call the function to perform the check when loading the page
+    checkAndDisplayLogMenu();
 });
 
 // Function to close a modal
