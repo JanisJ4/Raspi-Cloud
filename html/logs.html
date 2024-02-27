@@ -25,14 +25,14 @@
         <div class="menu" id="menu">
             <!-- Close button and navigation links -->
             <div class="menu-close-button" onclick="closeMenu()">✕</div>
+            <a href="/filepage.html">Filepage</a>
             <a href="/settings.html">Settings</a>
-            <a href="/logs.html" id="logMenuLink" style="display: none;">Log Data</a>
             <a href="#" class="Logout">Logout</a>
         </div>
 
         <!-- Header and main container -->
         <div class="header">
-            <b style="font-size: var(--bigger-text-size);">Internal area</b>
+            <b style="font-size: var(--bigger-text-size);">Log Data</b>
         </div>
         <div class="container">
             <!-- Navigation and file list  multiple webkitdirectory -->
@@ -42,38 +42,15 @@
                 <input type="file" id="fileInput" style="display: none;">
                 <div id="moreMenu" class="moreMenu"></div>
             </div>
-            <ul id="fileList">
-                <!-- List of files and folders -->
-            </ul>      
-
-            <!-- Modal for new folder -->
-            <div id="newFolderModal" class="modal">
-                <div class="modal-content">
-                    <span class="close" onclick="closeModal('newFolderModal')">&times;</span>
-                    <form id="newFolderForm">
-                        <h2>New folder</h2>
-                        <input type="text" id="newFolderName" name="newFolderName" placeholder="Folder name"
-                            required><br><br>
-                        <input type="submit" value="Create folder">
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Text Editor Modal -->
-        <div id="textEditorModal" class="modal">
-            <div class="editor-content">
-                <span class="close" onclick="closeModal('textEditorModal')">&times;</span>
-                <textarea id="textEditor" style="width: 100%; height: 300px;"></textarea>
-                <button onclick="saveTextFile()">Save</button>
-            </div>
-        </div>
-
+            
+            <div class="log-display" style="font-size: var(--normal-text-size); margin-left: 10px;">
+                <pre id="logContent" style="white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; "></pre>
+            </div>            
     </div>
 
     <!-- JavaScript for functionality -->
     <script src="script.js"></script>
-    <script src="script_filepage.js"></script>
+    <script src="script_logs.js"></script>
 </body>
 
 </html>

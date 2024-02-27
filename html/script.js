@@ -5,7 +5,7 @@ const serverPort = '8080';
 
 // Event listener for when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
-    var versionNumber = 'v2.4.1'; 
+    var versionNumber = 'v2.5.0'; 
     var versionTag = document.createElement('div');
     versionTag.className = 'version-tag';
     versionTag.textContent = versionNumber;
@@ -101,6 +101,35 @@ function checkAuthToken() {
         // Token is valid or not available
         console.log('Token is valid or not available.');
     }
+}
+
+
+// Function that is called when the page is loaded
+function checkAndDisplayLogMenu() {
+    const token = getCookie('token'); // Assumption that you have the getCookie function available
+    const username = getCookie('username');
+
+    // Direct call to check the user rights
+    return fetch(`${protocol}//${serverIP}:${serverPort}/user_rights`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            username: username
+        })
+    })
+    .then(response => response.json())
+    .then(userRights => {
+        // Check whether the user has the 'owner' right
+        const hasOwnerRight = userRights.some(userRight => userRight.right.toLowerCase() === 'owner');
+        if (hasOwnerRight) {
+            // If the user has the right 'owner', display the menu item
+            document.getElementById('logMenuLink').style.display = 'block';
+        }
+    })
+    .catch(error => console.error('Error checking user rights:', error));
 }
 
 // Event listener for logout action

@@ -20,6 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set initial values in the local storage for view and group_id
     localStorage.setItem('view', 'user');
     localStorage.setItem('group_id', null);
+
+    // Call the function to perform the check when loading the page
+    checkAndDisplayLogMenu();
 });
 
 // Function to close a modal by setting its display property to 'none'
@@ -237,38 +240,6 @@ function loadAllUsers() {
         })
         .catch(error => {
             console.error('Error loading users:', error);
-        });
-}
-
-// Function to fetch and process user rights
-function fetchUserRights(username) {
-    // Retrieve the authentication token
-    const token = getCookie('token');
-
-    // Default rights that should always be displayed
-    const standardRights = ['admin', 'owner'];
-    return fetch(`${protocol}//${serverIP}:${serverPort}/user_rights`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-            username: username
-        })
-    })
-        .then(response => {
-            checkForTokenExpiration(response);
-            return response.json();
-        })
-        .then(userRights => {
-            // Create an object to store the status of each right
-            const rightsStatus = standardRights.reduce((acc, right) => {
-                // Check if the right is present in the userRights array and set it accordingly in the checkbox
-                acc[right] = userRights.some(userRight => userRight.right.toLowerCase() === right.toLowerCase());
-                return acc;
-            }, {});
-            return rightsStatus;
         });
 }
 
