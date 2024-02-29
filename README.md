@@ -1,4 +1,11 @@
-# Raspi-Cloud
+<p align="center">
+<img src="html/favicon.png" width="150" title="Raspi-Cloud-Logo">
+</p>
+<h2 align="center">Raspi-Cloud - Unlimited Data Privacy for Truly Everyone.</h2>
+<br/>
+<img src="design/raspi-cloud-screenshots.png" title="Main Screenshot">
+</a>
+<br/>
 
 ## Introduction
 
