@@ -5,7 +5,7 @@ const serverPort = '8080';
 
 // Event listener for when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
-    var versionNumber = 'v2.5.0'; 
+    var versionNumber = 'v2.5.1'; 
     var versionTag = document.createElement('div');
     versionTag.className = 'version-tag';
     versionTag.textContent = versionNumber;

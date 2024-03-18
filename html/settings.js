@@ -243,6 +243,38 @@ function loadAllUsers() {
         });
 }
 
+// Function to fetch and process user rights
+function fetchUserRights(username) {
+    // Retrieve the authentication token
+    const token = getCookie('token');
+
+    // Default rights that should always be displayed
+    const standardRights = ['admin', 'owner'];
+    return fetch(`${protocol}//${serverIP}:${serverPort}/user_rights`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            username: username
+        })
+    })
+        .then(response => {
+            checkForTokenExpiration(response);
+            return response.json();
+        })
+        .then(userRights => {
+            // Create an object to store the status of each right
+            const rightsStatus = standardRights.reduce((acc, right) => {
+                // Check if the right is present in the userRights array and set it accordingly in the checkbox
+                acc[right] = userRights.some(userRight => userRight.right.toLowerCase() === right.toLowerCase());
+                return acc;
+            }, {});
+            return rightsStatus;
+        });
+}
+
 // Function to fetch and process group-specific user rights
 function fetchGroupUserRights(username) {
     // Group-specific rights to be checked

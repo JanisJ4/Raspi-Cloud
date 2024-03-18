@@ -34,71 +34,20 @@ function goHome() {
     // Update directory buttons (commented out)
 }
 
-// Function to start the file upload process
-function uploadFile() {
-    // Open file selection dialog
-    openFileSelection();
-    // Add event listener for changes in the file input field
-    document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+// Function to open the file selection dialog
+function openFileSelection() {
+    const fileInput = document.getElementById('fileInput'); // Get the file input element
+    fileInput.click(); // Programmatically click the file input to open the file dialog
 }
 
-// Function to create a new folder
-function createFolder() {
-    // Retrieve authentication token from cookies
-    const token = getCookie('token');
-    var newFolderForm = document.getElementById("newFolderForm");
-
-    // Define the action on form submission
-    newFolderForm.onsubmit = function (event) {
-        // Prevent the default form submission
-        event.preventDefault();
-        // Get the folder name from the input field
-        const folder_name = document.getElementById('newFolderName').value;
-        // Retrieve or initialize the directory path
-        var directory = localStorage.getItem('filepath');
-        if (directory === null) {
-            localStorage.setItem('filepath', '');
-            directory = '';
-        }
-
-        // Attempt to send a request to the server to create a folder
-        try {
-            fetch(`${protocol}//${serverIP}:${serverPort}/create_folder`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    folder_name: folder_name,
-                    directory: directory,
-                    group_id: localStorage.getItem('group')
-                })
-            })
-                .then(response => {
-                    checkForTokenExpiration(response);
-                    return response.json();
-                })
-                .then(data => {
-                    // Reload group files on success or display an error message
-                    if (data.success) {
-                        loadGroupFiles()
-                    } else {
-                        alert(data.message); // Show error message
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-        } catch (error) {
-            console.error('Error during fetch:', error);
-        }
-    };
-
-    // Display the modal for creating a new folder
-    document.getElementById("newFolderModal").style.display = 'block';
-}
-
+window.addEventListener('load', function() {
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const files = e.target.files; // This is a FileList, not an array
+        const filesArray = Array.from(files).map(file => ({ isFile: true, file: file }));
+        console.log('Files:', filesArray);
+        handleFilesUpload(filesArray);
+    });
+});
 
 // Function to toggle the visibility of the mini menu
 function toggleMiniMenu() {
@@ -116,7 +65,7 @@ function toggleMiniMenu() {
     const uploadButton = document.createElement('button');
     uploadButton.textContent = 'Upload';
     uploadButton.classList.add('menuButton');
-    uploadButton.onclick = function () { uploadFile(); };
+    uploadButton.onclick = function () { openFileSelection(); };
 
     // Create New Folder Button
     const newFolderButton = document.createElement('button');
@@ -672,12 +621,6 @@ async function fetchFileContent(filename) {
     }
 }
 
-// Function to open the file selection dialog
-function openFileSelection() {
-    const fileInput = document.getElementById('fileInput'); // Get the file input element
-    fileInput.click(); // Programmatically click the file input to open the file dialog
-}
-
 async function saveEditedFile(filename, editedContent) {
     // Retrieve the authentication token
     const token = getCookie('token');
@@ -726,62 +669,123 @@ async function saveEditedFile(filename, editedContent) {
     }
 }
 
-// Function to handle the file upload process
-async function handleFileUpload() {
+// Function to create a new folder
+function createFolder() {
+    // Retrieve authentication token from cookies
+    const token = getCookie('token');
+    var newFolderForm = document.getElementById("newFolderForm");
+
+    // Define the action on form submission
+    newFolderForm.onsubmit = function (event) {
+        // Prevent the default form submission
+        event.preventDefault();
+        // Get the folder name from the input field
+        const folder_name = document.getElementById('newFolderName').value;
+        // Retrieve or initialize the directory path
+        var directory = localStorage.getItem('filepath');
+        if (directory === null) {
+            localStorage.setItem('filepath', '');
+            directory = '';
+        }
+
+        // Attempt to send a request to the server to create a folder
+        try {
+            fetch(`${protocol}//${serverIP}:${serverPort}/create_folder`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    folder_name: folder_name,
+                    directory: directory,
+                    group_id: localStorage.getItem('group')
+                })
+            })
+                .then(response => {
+                    checkForTokenExpiration(response);
+                    return response.json();
+                })
+                .then(data => {
+                    // Reload group files on success or display an error message
+                    if (data.success) {
+                        loadGroupFiles()
+                    } else {
+                        alert(data.message); // Show error message
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        } catch (error) {
+            console.error('Error during fetch:', error);
+        }
+    };
+
+    // Display the modal for creating a new folder
+    document.getElementById("newFolderModal").style.display = 'block';
+}
+
+async function handleFilesUpload(filesAndFolders) {
     // Retrieve the authentication token
     const token = getCookie('token');
     const folder = localStorage.getItem('filepath'); // Get the current folder from local storage
-    const fileInput = document.getElementById('fileInput');
-    const file = fileInput.files[0]; // Get the selected file
 
-    // Check if a file is selected
-    if (!file) {
-        alert('Please choose a file'); // Alert if no file is selected
+    // Check if files and folders are selected
+    if (!filesAndFolders || filesAndFolders.length === 0) {
+        alert('Please choose files or folders'); // Alert if no file or folder is selected
         return;
     }
 
-    const url = `${protocol}//${serverIP}:${serverPort}/upload_file`; // Construct the URL for the upload request
-
-    // Prepare the JSON body and append it to the FormData object
-    const jsonBody = JSON.stringify({
-        folder: folder,
-        group: localStorage.getItem('group') // Get the current group ID from local storage
-    });
-
-    const formData = new FormData();
-    formData.append('file', file); // Append the file to the FormData object
-    formData.append('json', jsonBody); // Append the JSON data as a string
-
     closeMiniMenu();
-    const fileList = document.getElementById('fileList'); // Get the element to display files and folders
-    // show uploadIndicator
-    fileList.innerHTML += '<li class="fileListHeader"><div class="fileInfo">Upload file...</div><div class="fileInfo">...</div><div class="fileInfo">...</div><div class="fileInfo">...</div><div class="fileButton"></div> <!-- Empty divs as placeholders for buttons --><div class="fileButton"></div></li>';
 
-    try {
-        // Send a POST request to the server to upload the file
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`, // Include the token in the request headers
-            },
-            body: formData, // Send the FormData object containing the file and JSON data
-        });
+    for (let item of filesAndFolders) {
+        if (item.isFile) {
+            // Handle file upload
+            const file = item.file;
+            const url = `${protocol}//${serverIP}:${serverPort}/upload_file`; // Construct the URL for the upload request
 
-        // Check for a successful server response
-        checkForTokenExpiration(response);
+            // Prepare the JSON body and append it to the FormData object
+            const jsonBody = JSON.stringify({
+                folder: folder,
+                group: localStorage.getItem('group') // Get the current group ID from local storage
+            });
 
-        const data = await response.json(); // Parse the JSON response
+            const formData = new FormData();
+            formData.append('file', file); // Append the file to the FormData object
+            formData.append('json', jsonBody); // Append the JSON data as a string
 
-        // Check the response data for success or failure
-        if (data.success) {
-            loadGroupFiles(); // Reload the group files to reflect the uploaded file
+            const fileList = document.getElementById('fileList'); // Get the element to display files and folders
+            // show uploadIndicator
+            fileList.innerHTML += '<li class="fileListHeader"><div class="fileInfo">Upload file...</div><div class="fileInfo">...</div><div class="fileInfo">...</div><div class="fileInfo">...</div><div class="fileButton"></div> <!-- Empty divs as placeholders for buttons --><div class="fileButton"></div></li>';
+
+            try {
+                // Send a POST request to the server to upload the file
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`, // Include the token in the request headers
+                    },
+                    body: formData, // Send the FormData object containing the file and JSON data
+                });
+
+                // Check for a successful server response
+                checkForTokenExpiration(response);
+
+                const data = await response.json(); // Parse the JSON response
+
+                // Check the response data for success or failure
+                if (!data.success) {
+                    alert('Error while uploading'); // Alert if the upload fails
+                    console.error(data.message); // Log the error message
+                }
+            } catch (error) {
+                console.error('Error during fetch:', error); // Log any errors to the console
+            }
         } else {
-            alert('Error while uploading'); // Alert if the upload fails
-            console.error(data.message); // Log the error message
+            console.error('Unsuported item type:', item);
         }
-    } catch (error) {
-        console.error('Error during fetch:', error); // Log any errors to the console
-    } 
-    // Optionally reset the file input field to allow re-selection of the same file
-    fileInput.value = null;
+    }
+
+    loadGroupFiles(); // Reload the group files to reflect the uploaded files and created folders
 }
