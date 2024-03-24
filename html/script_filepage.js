@@ -1,3 +1,5 @@
+let selectedFiles = [];
+
 // Event listener for when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
     // Call function to load user groups on page load
@@ -40,8 +42,8 @@ function openFileSelection() {
     fileInput.click(); // Programmatically click the file input to open the file dialog
 }
 
-window.addEventListener('load', function() {
-    document.getElementById('fileInput').addEventListener('change', function(e) {
+window.addEventListener('load', function () {
+    document.getElementById('fileInput').addEventListener('change', function (e) {
         const files = e.target.files; // This is a FileList, not an array
         const filesArray = Array.from(files).map(file => ({ isFile: true, file: file }));
         console.log('Files:', filesArray);
@@ -361,14 +363,21 @@ function showGroupFiles(filesAndFolders) {
             actionButton.innerHTML = '<i class="fa fa-folder"></i>'; // Icon for folder
             actionButton.addEventListener('click', () => openFolder(item.name)); // Event handler to open folder
         } else {
+            actionButton.id = 'downloadButton-' + item.name; // Use the filename to ensure uniqueness
             actionButton.innerHTML = '<i class="fa fa-download"></i>'; // Icon for download
-            actionButton.addEventListener('click', () => downloadFile(item.name)); // Event handler to download file
+            actionButton.addEventListener('click', () => downloadFile(item.name, actionButton.id)); // Event handler to download file
         }
-
+        
         const moreButton = document.createElement('div');
         moreButton.classList.add('fileButton', 'moreButton');
         moreButton.innerHTML = '<i class="fa fa-ellipsis-v"></i>'; // Icon for more options
         moreButton.addEventListener('click', () => showMoreMenu(item)); // Event handler to show more options
+
+        // Create toggle field for selecting files
+        const selectToggle = document.createElement('input');
+        selectToggle.type = 'checkbox';
+        selectToggle.classList.add('fileToggle');
+        selectToggle.addEventListener('change', () => toggleFileSelection(item.name)); // Set event handler for toggling selection
 
         // Append elements to the list item and then to the file list
         listItem.appendChild(fileInfoName);
@@ -377,6 +386,7 @@ function showGroupFiles(filesAndFolders) {
         listItem.appendChild(fileInfoSize);
         listItem.appendChild(deleteButton);
         listItem.appendChild(actionButton);
+        listItem.appendChild(selectToggle);
         listItem.appendChild(moreButton);
         fileList.appendChild(listItem);
     });
@@ -424,7 +434,11 @@ function showMoreMenu(item) {
     const downloadButton = document.createElement('button');
     downloadButton.textContent = 'Download';
     downloadButton.classList.add('menuButton');
-    downloadButton.onclick = function () { downloadFile(item.name); };
+    const downloadButtonId = `download-${item.name.replace(/[^a-zA-Z0-9]/g, "-")}`; // Sanitize the item name to create a valid ID
+    downloadButton.id = downloadButtonId; // Set the ID for the download button
+
+    // Update the download button click event to pass the unique ID
+    downloadButton.onclick = function () { downloadFile(item.name, downloadButtonId); };
 
     // Create a delete button
     const deleteButton = document.createElement('button');
@@ -483,6 +497,43 @@ async function openFolder(folder) {
     }
 }
 
+// Function to toggle file selection
+function toggleFileSelection(fileName) {
+    // Check if the file is already selected
+    const index = selectedFiles.indexOf(fileName);
+
+    // If the file is already selected, remove it from the array
+    if (index > -1) {
+        selectedFiles.splice(index, 1);
+    } else {
+        // If the file is not selected, add it to the array
+        selectedFiles.push(fileName);
+    }
+
+    // Get the button element
+    const downloadButton = document.getElementById('selectedFilesDownload');
+    const deleteButton = document.getElementById('selectedFilesDelete');
+
+    // If there are any selected files, show the button. Otherwise, hide it.
+    if (selectedFiles.length > 0) {
+        downloadButton.style.display = 'block';
+        deleteButton.style.display = 'block';
+    } else {
+        downloadButton.style.display = 'none';
+        deleteButton.style.display = 'none';
+
+    }
+}
+
+// Function to download all selected files
+document.getElementById('selectedFilesDelete').addEventListener('click', async () => {
+    // Loop over the array of selected files
+    for (let i = 0; i < selectedFiles.length; i++) {
+        // Call the downloadFile function for each file
+        await deleteFile(selectedFiles[i]);
+    }
+});
+
 // Function to delete a file
 async function deleteFile(filename) {
     // Confirm the file deletion
@@ -534,49 +585,68 @@ async function deleteFile(filename) {
     }
 }
 
+// Function to download all selected files
+document.getElementById('selectedFilesDownload').addEventListener('click', async () => {
+    // Loop over the array of selected files
+    for (let i = 0; i < selectedFiles.length; i++) {
+        // Call the downloadFile function for each file
+        await downloadFile(selectedFiles[i], 'downloadButton-' + selectedFiles[i]);
+    }
+});
+
 // Function to download a file
-async function downloadFile(filename) {
-    // Retrieve the authentication token
-    const token = getCookie('token');
-    const folder = localStorage.getItem('filepath'); // Get the current folder from local storage
+async function downloadFile(filename, downloadButtonId) {
+    const downloadButton = document.getElementById(downloadButtonId); // Get the download button
+    const originalButtonContent = downloadButton.innerHTML;
+    if (downloadButton) {
+        downloadButton.innerHTML = '<div class="loader"></div>'; // Replace with loader (spinner)
 
-    const url = `${protocol}//${serverIP}:${serverPort}/download_file`; // Construct the URL for the download request
+        const token = getCookie('token');
+        const folder = localStorage.getItem('filepath'); // Get the current folder from local storage
+        const url = `${protocol}//${serverIP}:${serverPort}/download_file`; // Construct the URL for the download request
 
-    const requestBody = {
-        filename: filename,
-        folder: folder,
-        group: localStorage.getItem('group') // Get the current group ID from local storage
-    };
+        const requestBody = {
+            filename: filename,
+            folder: folder,
+            group: localStorage.getItem('group') // Get the current group ID from local storage
+        };
 
-    try {
-        // Send a POST request to the server to initiate file download
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`, // Include the token in the request headers
-            },
-            body: JSON.stringify(requestBody),
-        });
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`, // Include the token in the request headers
+                },
+                body: JSON.stringify(requestBody),
+            });
 
-        // Check for a successful server response
-        checkForTokenExpiration(response);
+            checkForTokenExpiration(response);
 
-        const blob = await response.blob(); // Get the blob data from the response
-        let correctedFilename = filename;
+            if (response.ok) {
+                const blob = await response.blob(); // Get the blob data from the response
+                const downloadLink = document.createElement('a');
+                downloadLink.href = window.URL.createObjectURL(blob);
+                downloadLink.download = filename;
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                downloadLink.remove(); // Remove the link element immediately after clicking
+            } else {
+                console.error('Download button with ID ' + downloadButtonId + ' not found.');
+            }
 
-        // Create a temporary link element for downloading the file
-        const downloadLink = document.createElement('a');
-        downloadLink.href = window.URL.createObjectURL(blob); // Create a URL for the blob
-        downloadLink.download = correctedFilename; // Set the download attribute with the filename
-        document.body.appendChild(downloadLink);
-        downloadLink.click(); // Programmatically click the link to start the download
-        window.URL.revokeObjectURL(downloadLink.href); // Revoke the created URL to free resources
+        } catch (error) {
+            console.error('Error during download:', error);
+            downloadButton.innerHTML = originalButtonContent; // Restore the original button content in case of error
+            alert('An error occurred while downloading the file.'); // Show an error message
+        }
+        // After the download process is initiated or fails
+        setTimeout(() => {
+            downloadButton.innerHTML = originalButtonContent; // Restore the original button content
 
-        // Remove the link element from the document
-        document.body.removeChild(downloadLink);
-    } catch (error) {
-        console.error('Error during fetch:', error); // Log any errors to the console
+        }, 100); // Short delay to ensure UI updates after the download starts
+    } else {
+        throw new Error('The download was not successful.');
     }
 }
 
