@@ -101,6 +101,25 @@ ul li:last-child {
     border: 1px solid var(--border-line);
 }
 
+#selectedFilesDownload {
+    text-align: center;
+    margin-top: -35px;
+    margin-right: 40px;
+    display: inline-block;
+    color: var(--text-color);
+    float: right; /* Align to the right side */
+}
+
+#selectedFilesDelete {
+    text-align: center;
+    margin-top: -35px;
+    margin-right: 10px;
+    display: inline-block;
+    color: var(--text-color);
+    background-color: red;
+    float: right; /* Align to the right side */
+}
+
 /* Styles for the 'fileList' element */
 #fileList {
     list-style: none;
@@ -115,7 +134,7 @@ ul li:last-child {
 .fileListHeader,
 .fileListItem {
     display: grid;
-    grid-template-columns: 4fr 2fr 2fr 2fr 1fr 1fr;
+    grid-template-columns: 16fr 8fr 8fr 8fr 4fr 4fr 1fr;
     align-items: center;
     width: 100%; /* Take full width of #fileList container */
     overflow: hidden;
@@ -201,6 +220,21 @@ ul li:last-child {
     background-color: var(--background-color);
     resize: vertical; /* Allow only vertical resizing */
 }
+
+.loader {
+    border: 4px solid #f3f3f3; /* Light grey background */
+    border-top: 4px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
  
 /* Media query for small screens (max-width: 768px) */
 @media only screen and (max-width: 768px) {
@@ -250,7 +284,7 @@ ul li:last-child {
     }
 
     .fileListItem {
-        grid-template-columns: 1fr auto;
+        grid-template-columns: 1fr auto auto;
     }
 
     /* Style for the 'moreMenu' on small screens */
@@ -278,6 +312,41 @@ ul li:last-child {
 
     .fileListItem.is-text .moreButton {
         display: none;
+    }
+
+    .fileListItem.is-folder .fileToggle {
+        display: none;
+    }
+
+    #selectedFilesDownload {
+        text-align: center;
+        margin-bottom: 0px;
+        margin-right: 0px;
+        display: inline-block;
+        color: var(--text-color);
+        position: absolute;
+        bottom: 0px; /* Adjust the value as needed */
+        right: 0; /* Adjust the value as needed */
+        height: 85px;
+        width: 50vw;
+        border-radius: 0;
+        z-index: 3; /* Ensure the menu appears above other elements */
+    }
+    
+    #selectedFilesDelete {
+        text-align: center;
+        margin-bottom: 0px;
+        margin-right: 0px;
+        display: inline-block;
+        color: var(--text-color);
+        background-color: red;
+        position: absolute;
+        bottom: 0px; /* Adjust the value as needed */
+        right: 50vw; /* Adjust the value as needed */
+        height: 85px;
+        width: 50vw;
+        border-radius: 0;
+        z-index: 3; /* Ensure the menu appears above other elements */
     }
 
     .menuButton {

@@ -1,10 +1,9 @@
-/* Light Mode Styles */
 :root {
-    --background-color: #424242; 
-    --text-color: #fff;
-    --hover-background: #606060;
-    --border-line: #777;
-    --green: #6cc644;
+    --background-color: #2c2f33; /* A slightly lighter shade of dark gray */
+    --text-color: #f8f8f2; /* Off-white for less glare */
+    --hover-background: #3c3f43; /* A soft difference on hover */
+    --border-line: #4f5257; /* Lighter border */
+    --green: #26cc50; /* A softer green, still bright enough to stand out */
     --normal-text-size: 16px;
     --bigger-text-size: 24px;
     --button-text-size: 16px;
@@ -12,14 +11,14 @@
 
 /* Dark Mode Styles */
 body.light-mode {
-    --background-color: #f5f5f5;
-    --text-color: #333;
-    --hover-background: #e0e0e0;
-    --border-line: #ccc;
+    --background-color: #fafafa; /* A very light gray instead of pure white for the light mode */
+    --text-color: #424242; /* A dark gray for text to reduce harshness */
+    --hover-background: #f0f0f0;
+    --border-line: #dcdcdc;
 
     background-color: var(--background-color);
-    color: var(--text-color); /* Text color in dark mode */
-    border-bottom: 1px solid var(--border-line); /* Change line color in dark mode */
+    color: var(--text-color);
+    border-bottom: 1px solid var(--border-line);
     font-size: var(--normal-text-size);
 }
 
