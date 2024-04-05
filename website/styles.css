@@ -1,0 +1,291 @@
+body,
+html {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+}
+
+body {
+    max-width: 1200px;
+    margin: auto;
+}
+
+
+header {
+    color: #fff;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+header img.logo {
+    max-width: 70px;
+    height: auto;
+}
+
+
+header nav ul li a {
+    color: #fff;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+header nav ul {
+    list-style: none;
+    padding: 0;
+}
+
+header nav ul li {
+    display: inline-block;
+    margin-right: 20px;
+}
+
+header nav ul li a {
+    text-decoration: none;
+    color: white;
+    position: relative;
+}
+
+header nav ul li a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    background-color: rgb(15, 175, 0);
+    left: 50%;
+    bottom: -5px;
+    transition: width 0.3s ease, left 0.3s ease;
+}
+
+header nav ul li a:hover::after {
+    width: 100%;
+    left: 0;
+}
+
+
+
+h1 {
+    font-size: 36px;
+}
+
+h2 {
+    font-size: 32px;
+}
+
+h3 {
+    font-size: 24px;
+}
+
+
+main {
+    padding: 20px;
+}
+
+#hero {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+#hero img.main-screenshot {
+    max-width: 100%;
+    height: auto;
+    margin-top: 20px;
+}
+
+#why-raspi-cloud {
+    margin-top: 60px;
+    margin-left: 50px;
+    margin-right: 50px;
+    padding: 40px 20px;
+    border-radius: 10px;
+    box-shadow: 0px 40px 100px rgba(13, 39, 0, 0.543);
+    color: #ffffff;
+}
+
+#why-raspi-cloud .container {
+    max-width: 1200px;
+    margin: auto;
+    text-align: center;
+    border-radius: 10px;
+    background-clip: padding-box;
+}
+
+#why-raspi-cloud {
+    position: relative;
+    background: linear-gradient(180deg, rgba(4, 15, 4, 0.9) 0%, rgba(0, 20, 0, 0.9) 100%);
+    overflow: hidden;
+}
+
+#why-raspi-cloud::after {
+    content: '';
+    position: absolute;
+    top: -200px;
+    right: -20px;
+    bottom: -20px;
+    left: -20px;
+    z-index: -1;
+    background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.7), transparent);
+    border-radius: inherit;
+}
+
+#why-raspi-cloud h2 {
+    margin-bottom: 20px;
+}
+
+#why-raspi-cloud p {
+    font-size: 18px;
+    line-height: 1.6;
+}
+
+
+.installation-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.installation-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.installation-step img {
+    flex-shrink: 0;
+    flex-basis: 300px;
+    max-width: 100%;
+    max-height: 300px;
+    object-fit: cover;
+}
+
+.installation-step div {
+    flex-grow: 1;
+    flex-basis: calc(50% - 20px);
+}
+
+.installation-step.right {
+    flex-direction: row-reverse;
+}
+
+@media (max-width: 768px) {
+    .installation-step {
+        flex-direction: column;
+    }
+
+    .installation-step img {
+        flex-basis: auto;
+        max-width: 80%;
+        margin: 20px auto;
+    }
+
+    .installation-step div {
+        width: 100%;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1124px) {
+
+    .installation-step img,
+    .installation-step div {
+        flex-basis: 100%;
+    }
+}
+
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1100px;
+        margin: auto;
+    }
+
+    h1,
+    h2,
+    h3 {
+        font-size: calc(2.1em);
+    }
+}
+
+@media (min-width: 1600px) {
+    .container {
+        max-width: 1500px;
+    }
+}
+
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+}
+
+#hero,
+#installation,
+#more-information {
+    padding: 5px 20px;
+}
+
+#why-raspi-cloud {
+    padding: 40px 20px;
+}
+
+code {
+    font-family: 'Courier New', Courier, monospace;
+}
+
+footer {
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    padding: 10px 20px;
+    margin-top: 20px;
+}
+
+    body {
+        color: #cccccc;
+    }
+
+    #why-raspi-cloud {
+        background-color: #333;
+    }
+
+    nav ul li a {
+        color: #cccccc;
+    }
+
+    nav ul li a:hover {
+        color: #ffffff;
+    }
+
+    pre {
+        background-color: #333;
+        padding: 10px;
+        overflow: auto;
+    }
+
+    footer {
+        background-color: #333333;
+        color: #cccccc;
+    }
+
+
+#dynamicBackground {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: linear-gradient(180deg, #111 0%, #000 100%);
+    transition: background 0.8s ease;
+    z-index: -1;
+}
+
+.shadow-section {
+    background-color: #fff;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(255, 0, 0, 0.1);
+}

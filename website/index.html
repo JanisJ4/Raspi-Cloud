@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Raspi-Cloud: Unlimited Data Privacy</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.1/dist/aos.css">
+</head>
+
+<body>
+
+  <header>
+    <img src="/images/logo.png" alt="Raspi-Cloud Logo" class="logo">
+    <nav>
+      <ul>
+        <li><a href="https://github.com/JanisJ4/Raspi-Cloud">Code</a></li>
+        <li><a href="#installation">Installation</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <div id="dynamicBackground"></div>
+
+  <main>
+
+    <section id="hero" data-aos="fade-in">
+      <h1>Raspi-Cloud: Unlimited Data Privacy for Truly Everyone</h1>
+      <h3>Secure cloud solutions keeping personal data on your own server.</h3>
+      <img src="/images/raspi-cloud-screenshots.png" alt="Main Screenshot of Raspi-Cloud" class="main-screenshot">
+    </section>
+
+    <section id="why-raspi-cloud" data-aos="fade-up" data-aos-delay="300">
+      <div class="container">
+        <h2>Why Raspi-Cloud?</h2>
+        <p>Raspi-Cloud revolutionizes the way you think about cloud storage. Designed to run smoothly on
+          low-powered devices like the Raspberry Pi, it ensures that anyone can set up their own cloud server,
+          offering an unparalleled level of data privacy and security. With Raspi-Cloud, your data stays at
+          home, under your control, and is accessible even over slow internet connections, making it truly
+          location-independent.</p>
+        <p>This cloud solution is for those who value their privacy and seek a reliable, cost-effective way to
+          manage their data independently. It's built to be lightweight, yet powerful enough to handle your
+          storage needs without requiring expensive hardware or fast internet speeds.</p>
+      </div>
+    </section>
+
+    <section id="installation" data-aos="fade-up">
+      <h2>Installation</h2>
+      <p>Follow these steps to get Raspi-Cloud up and running on your Raspberry Pi.</p>
+
+      <div class="installation-step right" data-aos="fade-right" data-aos-delay="300">
+        <div>
+          <h3>1. Cloning the Repository</h3>
+          <p>Start by updating your package list and installing git:</p>
+          <pre><code>sudo apt-get update
+sudo apt-get install -y git</code></pre>
+          <p>Then, clone the Raspi-Cloud repository:</p>
+          <pre><code>git clone https://github.com/JanisJ4/Raspi-Cloud.git</code></pre>
+        </div>
+        <img src="/images/clone-raspi-cloud.png" alt="Cloning the repository">
+      </div>
+
+      <div class="installation-step left" data-aos="fade-left" data-aos-delay="300">
+        <div>
+          <h3>2. Setting Up the Cloud</h3>
+          <p>Navigate to the Raspi-Cloud directory and run the installation script. Choose HTTPS for a secure
+            setup:</p>
+          <pre><code>cd Raspi-Cloud <br>sudo bash install_script_https.sh</code></pre>
+          <p>For HTTP (not recommended), use:</p>
+          <pre><code>sudo bash install_script_http.sh</code></pre>
+        </div>
+        <img src="/images/raspi-cloud-set-up.png" alt="Setting up the server">
+      </div>
+
+      <div class="installation-step right" data-aos="fade-right" data-aos-delay="300">
+        <div>
+          <h3>3. Accessing the Web Interface</h3>
+          <p>Once Raspi-Cloud is installed, you can access the web interface through your browser. Simply
+            enter the local IP address of your Raspberry Pi followed by the port number used by Raspi-Cloud:
+          </p>
+          <pre><code>raspberrypi.local</code></pre>
+          <p>Replace "raspberrypi.local" with the actual IP address or Domain if necessary. The default login
+            credentials will be provided during the installation process.</p>
+        </div>
+        <img src="/images/raspi-cloud-web-interface.png" alt="Accessing the Web Interface">
+      </div>
+
+      <!-- Add more steps as needed -->
+    </section>
+
+    <section id="more-information" data-aos="fade-up">
+      <h2>More Informations</h2>
+      <p>For more details, visit the GitHub repository of Raspi-Cloud at <a
+          href="https://github.com/JanisJ4/Raspi-Cloud" target="_blank"
+          style="color: rgb(15, 175, 0);">JanisJ4/Raspi-Cloud</a>.</p>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/aos@2.3.1/dist/aos.js"></script>
+  <script>
+    AOS.init();
+  </script>
+  <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+  <script src="script.js"></script>
+
+
+</body>
+
+<footer>
+  <p>© 2024 Raspi-Cloud Project</p>
+</footer>
+
+</html>
